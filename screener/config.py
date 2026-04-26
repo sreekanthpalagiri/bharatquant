@@ -64,7 +64,7 @@ LOG_LEVEL = conf["logging"]["level"]
 # Setup Logging
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL),
-    format="%(asctime)s %(levelname)s %(message)s",
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger("BharatQuant")
