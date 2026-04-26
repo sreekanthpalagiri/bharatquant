@@ -1,160 +1,89 @@
-import os
 import time
-
-# Ensure pure Python implementation of Protobuf is used
-os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
-
-from screener.config import (
-    log, MAX_STOCKS_PER_EXCHANGE, BATCH_SIZE, SLEEP_PRICE_BATCH,
-    MIN_PRICE, WHITELIST
-)
-from screener.utils import clean_code
-from screener.cache import (
-    load_ticker_cache, shares_cache_fresh, save_cache
-)
+import os
+from datetime import datetime
 from screener.network import (
-    get_nse_tickers, get_bse_tickers, fetch_bhavcopy_prices
+    download_nse_tickers,
+    download_bse_bulk_mcap,
+    load_nse_tickers,
+    load_bse_bulk_mcap,
 )
-from screener.finance import (
-    fetch_shares_outstanding, fetch_prices_batch
+from screener.config import (
+    log,
+    TICKER_CACHE_FILE,
+    TICKER_CACHE_DAYS,
+    SHARES_CACHE_DAYS,
+    COLUMNS,
 )
 from screener.processor import (
-    dedup_by_isin, is_valid_ticker, filter_by_mcap, fetch_all_stock_data_parallel
+    dedup_by_isin,
+    filter_by_mcap,
+    fetch_all_stock_data_parallel,
+    is_valid_ticker,
 )
+from screener.finance import fetch_shares_outstanding, fetch_prices_batch
 from screener.exporter import write_excel
+from screener.cache import load_cache, save_cache
+
 
 def main():
-    log.info("=" * 65)
-    log.info("NSE + BSE Full Screener → Excel")
-    log.info("=" * 65)
+    print("\n" + "=" * 65)
+    print("              🇮🇳  BHARATQUANT PROFESSIONAL SCREENER  🇮🇳")
+    print("=" * 65 + "\n")
 
-    # ── Step 1: Ticker list (cached, refresh per TICKER_CACHE_DAYS) ─────
-    all_tickers = load_ticker_cache()
-    if all_tickers is None:
-        nse = get_nse_tickers()
-        bse = get_bse_tickers()
+    log.info("Starting BharatQuant Screener...")
 
-        raw = nse + bse
-        sanitised = []
-        for t in raw:
-            tk = t["ticker"]
-            if tk.endswith(".BO"):
-                base = clean_code(tk[:-3])
-                if base.isdigit():
-                    t = {**t, "ticker": base + ".BO", "bse_code": base}
-                    sanitised.append(t)
-            elif tk.endswith(".NS"):
-                base = tk[:-3].strip()
-                if base and base.replace("-","").replace("&","").isalnum():
-                    sanitised.append(t)
-
-        log.info(f"Raw tickers after sanitise: {len(sanitised)} (NSE {len(nse)}, BSE {len(bse)})")
-        all_tickers = dedup_by_isin(sanitised)
-        save_cache(all_tickers, update_tickers=True, update_shares=False)
-
+    # 1. Tickers (14-day cache)
+    all_tickers = load_cache()
     if not all_tickers:
-        log.error("No tickers. Check internet connection.")
-        return
+        log.info("Downloading fresh ticker lists...")
+        download_nse_tickers()
+        download_bse_bulk_mcap()
+        nse_raw = load_nse_tickers()
+        bse_raw = load_bse_bulk_mcap()
 
-    # ── Step 2: Validity filter & Cleaning ────────────────────────────
-    unique = [t for t in all_tickers if is_valid_ticker(t)]
-    save_cache(all_tickers, update_tickers=True, update_shares=False)
-    log.info(f"Master list cleaned: {len(unique)} valid stocks.")
+        log.info("Merging and deduplicating...")
+        merged = nse_raw + bse_raw
+        valid = [t for t in merged if is_valid_ticker(t)]
+        all_tickers = dedup_by_isin(valid)
+        save_cache(all_tickers, update_tickers=True)
 
-    # ── Step 3: Bhavcopy prices (Smart Matching via ISIN) ───────────────
-    log.info("Fetching today's closing prices from NSE + BSE bhavcopy...")
-    bhavcopy_prices = fetch_bhavcopy_prices(unique)
+    # 2. Shares (14-day cache)
+    needs_shares = [t for t in all_tickers if t.get("shares_outstanding") is None]
+    if needs_shares:
+        shares_map = fetch_shares_outstanding(needs_shares)
+        for t in all_tickers:
+            if t["ticker"] in shares_map:
+                t["shares_outstanding"] = shares_map[t["ticker"]]
+        save_cache(all_tickers, update_shares=True)
 
-    # ── Step 3.5: Penny Stock Shield ───────────────────────────────────
-    # Mark penny stocks in the master list and filter them out of 'unique'
-    penny_dropped = 0
-    clean_unique = []
-    
-    for t in unique:
-        tk = t["ticker"]
-        price = bhavcopy_prices.get(tk)
-        
-        if price is not None:
-            if price < MIN_PRICE and tk not in WHITELIST:
-                t["penny_stock"] = "yes"
-                penny_dropped += 1
-                continue
-            else:
-                t["penny_stock"] = "no"
-        else:
-            t["penny_stock"] = "unknown"
-            
-        clean_unique.append(t)
-
-    unique = clean_unique
-    if penny_dropped > 0:
-        log.info(f"Penny Stock Shield: Ignored {penny_dropped} stocks priced below ₹{MIN_PRICE} (Whitelisted: {len(WHITELIST)})")
-        save_cache(all_tickers, update_tickers=False, update_shares=True)
-
-    # ── Step 4: MCap filter (using bulk MCap from BSE where available) ────
-    unique = filter_by_mcap(unique, bhavcopy_prices)
-
-    if not unique:
-        log.error("No tickers passed MCap filter.")
-        return
-
-    # ── Step 5: Shares outstanding (Smart Population) ────────────────────
-    master_map = {t["ticker"]: t for t in all_tickers}
-    populated_count = 0
-    for t in unique:
-        tk = t["ticker"]
-        if t.get("shares_outstanding") is None:
-            mc_cr = t.get("mkt_cap_cr")
-            price = bhavcopy_prices.get(tk)
-            if mc_cr and price and price > 0:
-                shares = int((mc_cr * 1e7) / price)
-                t["shares_outstanding"] = shares
-                if tk in master_map:
-                    master_map[tk]["shares_outstanding"] = shares
-                populated_count += 1
-
-    if populated_count > 0:
-        log.info(f"Auto-calculated shares for {populated_count} tickers using local data.")
-        save_cache(all_tickers, update_tickers=False, update_shares=True)
-
-    # 5b. Identify remainders for Yahoo
-    to_fetch = [t for t in unique if t.get("shares_outstanding") is None]
-
-    if to_fetch:
-        symbols_to_log = ", ".join([t["ticker"] for t in to_fetch[:10]])
-        if len(to_fetch) > 10:
-            symbols_to_log += f" (+{len(to_fetch)-10} more)"
-        log.info(f"Still missing shares for {len(to_fetch)} tickers. Requesting from Yahoo: {symbols_to_log}")
-        
-        shares_map = fetch_shares_outstanding(to_fetch)
-        for tk, val in shares_map.items():
-            for t in unique:
-                if t["ticker"] == tk:
-                    t["shares_outstanding"] = val
-                    break
-            if tk in master_map:
-                master_map[tk]["shares_outstanding"] = val
-        
-        save_cache(all_tickers, update_tickers=False, update_shares=True)
-        log.info("Updated cache with Yahoo share data.")
-
-    # ── Step 6: Full 5y price fetch for filtered tickers ─────────────────
-    symbols  = [t["ticker"] for t in unique]
+    # 3. Prices (Fresh daily)
+    log.info("Downloading daily price batch (5y history)...")
+    ticker_list = [t["ticker"] for t in all_tickers]
     price_data = {}
-    total_b  = (len(symbols) + BATCH_SIZE - 1) // BATCH_SIZE
-    log.info(f"Full 5y price fetch for {len(symbols)} tickers ({total_b} batches)...")
-    for i in range(0, len(symbols), BATCH_SIZE):
-        batch = symbols[i:i + BATCH_SIZE]
-        log.info(f"Price batch {i//BATCH_SIZE+1}/{total_b}  ({len(batch)})...")
+    for i in range(0, len(ticker_list), 100):
+        batch = ticker_list[i : i + 100]
         price_data.update(fetch_prices_batch(batch))
-        time.sleep(SLEEP_PRICE_BATCH)
+        time.sleep(1.0)
 
-    # ── Step 7: Parallel financials fetch (with Checkpoint Saving) ───────
-    rows = fetch_all_stock_data_parallel(unique, price_data, all_tickers)
-    save_cache(all_tickers, update_tickers=False, update_shares=True)
+    # 4. MCap Filter
+    bhavcopy_prices = {
+        tk: float(d["Close"].iloc[-1])
+        for tk, d in price_data.items()
+        if not d.get("Close", []).empty
+    }
+    filtered = filter_by_mcap(all_tickers, bhavcopy_prices)
 
-    # ── Step 8: Write Excel ───────────────────────────────────────────────
+    # 5. Financials (Parallel + Cache)
+    rows = fetch_all_stock_data_parallel(filtered, price_data, all_tickers)
+
+    # 6. Export
     write_excel(rows)
 
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        log.info("\nStopped by user.")
+    except Exception as e:
+        log.error(f"Fatal error: {e}", exc_info=True)
