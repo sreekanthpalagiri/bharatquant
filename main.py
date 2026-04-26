@@ -6,10 +6,9 @@ from datetime import datetime
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 
 from screener.network import (
-    download_nse_tickers,
-    download_bse_bulk_mcap,
-    load_nse_tickers,
-    load_bse_bulk_mcap,
+    get_nse_tickers,
+    get_bse_tickers,
+    fetch_bhavcopy_prices,
 )
 from screener.config import (
     log,
@@ -40,10 +39,8 @@ def main():
     all_tickers = load_cache()
     if not all_tickers:
         log.info("Downloading fresh ticker lists...")
-        download_nse_tickers()
-        download_bse_bulk_mcap()
-        nse_raw = load_nse_tickers()
-        bse_raw = load_bse_bulk_mcap()
+        nse_raw = get_nse_tickers()
+        bse_raw = get_bse_tickers()
 
         log.info("Merging and deduplicating...")
         merged = nse_raw + bse_raw
