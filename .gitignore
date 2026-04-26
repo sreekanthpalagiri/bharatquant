@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+
+# Project specific
+data/
+config/screener_config.json
+.venv/
+venv/
+env/
+.idea/
+.vscode/
