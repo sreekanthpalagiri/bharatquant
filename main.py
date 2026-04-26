@@ -144,10 +144,15 @@ def main():
             symbols_to_log += f" (+{len(to_fetch)-10} more)"
         log.info(f"Still missing shares for {len(to_fetch)} tickers. Requesting from Yahoo: {symbols_to_log}")
         
-        shares_map = fetch_shares_outstanding(to_fetch)
+        info_map = fetch_shares_outstanding(to_fetch)
         for t in all_tickers:
-            if t["ticker"] in shares_map:
-                t["shares_outstanding"] = shares_map[t["ticker"]]
+            tk = t["ticker"]
+            if tk in info_map:
+                res = info_map[tk]
+                if res["shares"]:
+                    t["shares_outstanding"] = res["shares"]
+                if res["mkt_cap"]:
+                    t["mkt_cap_cr"] = round(res["mkt_cap"] / 1e7, 1)
         save_cache(all_tickers, update_shares=True)
 
     # ── Step 6: Full 5y price fetch for filtered tickers ─────────────────

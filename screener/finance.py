@@ -86,13 +86,13 @@ def fetch_prices_batch(batch: list[str], attempt=0) -> dict:
 
 def fetch_shares_outstanding(tickers: list) -> dict:
     """
-    Fetch shares_outstanding for a list of tickers via parallel .info calls.
+    Fetch shares_outstanding and marketCap for a list of tickers via parallel .info calls.
     Used as a fallback when 'Smart Population' in main.py cannot calculate shares.
     """
     n = len(tickers)
-    log.info(f"Fetching shares_outstanding for {n} tickers ({INFO_WORKERS} workers)...")
+    log.info(f"Fetching missing data for {n} tickers from Yahoo ({INFO_WORKERS} workers)...")
 
-    def get_shares(stock):
+    def get_info(stock):
         sym = stock["ticker"]
         time.sleep(random.uniform(0.1, 1.0))
         for attempt in range(2):
@@ -101,22 +101,27 @@ def fetch_shares_outstanding(tickers: list) -> dict:
                 info = ticker.info
                 if info:
                     so = info.get("sharesOutstanding")
-                    if so and so > 0:
-                        return sym, int(so)
                     mc = info.get("marketCap")
-                    price = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
-                    if mc and price and price > 0:
-                        return sym, int(mc / price)
+                    
+                    # Also try to calculate shares if MCap exists but shares doesn't
+                    if not so and mc:
+                        price = info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose")
+                        if price and price > 0:
+                            so = int(mc / price)
+                            
+                    if so or mc:
+                        return sym, so, mc
             except Exception:
                 pass
-        return sym, None
+        return sym, None, None
 
     result = {}
     with ThreadPoolExecutor(max_workers=INFO_WORKERS) as pool:
-        futures = {pool.submit(get_shares, t): t["ticker"] for t in tickers}
+        futures = {pool.submit(get_info, t): t["ticker"] for t in tickers}
         for fut in as_completed(futures):
-            sym, shares = fut.result()
-            result[sym] = shares
+            sym, shares, mcap = fut.result()
+            if shares or mcap:
+                result[sym] = {"shares": shares, "mkt_cap": mcap}
     return result
 
 
