@@ -41,8 +41,10 @@ The generated report at `data/nse_bse_screener.xlsx` contains the following metr
 
 ## 🎨 Color Coding Legend
 
+*Note: The entire row is color-coded based on these rules. All thresholds are fully configurable in `screener/config.py`.*
+
 - 🟩 **Green**: Bullish/Strong (e.g., RS Score > 0, F-Score 7-9, Growth > 20%, ROE > 15%).
-- 🟥 **Red**: Bearish/Weak (e.g., Negative Growth, F-Score < 4, Death Cross, High Pledging).
+- 🟥 **Red**: Bearish/Weak (e.g., Negative Growth, F-Score <= 3, High Debt, High Pledging).
 - 🟨 **Yellow**: Caution (e.g., RSI overbought/oversold levels).
 
 ## 🚀 How to Run

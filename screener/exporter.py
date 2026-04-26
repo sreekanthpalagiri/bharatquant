@@ -13,7 +13,7 @@ import os
 from datetime import datetime
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
-from .config import log, OUTPUT_FILE, HEADER_LABELS, WIDTH_MAP, FMT_MAP, TODAY
+from .config import log, OUTPUT_FILE, HEADER_LABELS, WIDTH_MAP, FMT_MAP, TODAY, COLOR_RULES, LEGEND
 
 # Define Colors for UI Highlighting
 GREEN_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
@@ -44,57 +44,83 @@ def write_excel(rows: list):
         df.to_excel(writer, index=False, sheet_name="Screener")
         ws = writer.sheets["Screener"]
 
+        # Helper to evaluate config string conditions
+        def check_cond(val, rule_str):
+            if val is None: return False
+            if "or" in rule_str:
+                return any(check_cond(val, r.strip()) for r in rule_str.split("or"))
+            if "-" in rule_str and not rule_str.startswith("-"):
+                try:
+                    p = rule_str.split("-")
+                    return float(p[0]) <= float(val) <= float(p[1])
+                except: return False
+            op = ''.join([c for c in rule_str if c in '<=>'])
+            try:
+                num = float(rule_str.replace(op, "").strip())
+                if op == ">": return float(val) > num
+                if op == ">=": return float(val) >= num
+                if op == "<": return float(val) < num
+                if op == "<=": return float(val) <= num
+            except: pass
+            return False
+
         # Apply Formatting
         for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+            row_dict = dict(zip(df.columns, row))
+            
+            # Determine Row Color
+            row_fill = None
+            is_red = False
+            green_points = 0
+            
+            # 1. Check Red Flags (Immediate Red)
+            for col, rule in COLOR_RULES.get("red", {}).items():
+                if col == "Growth %":
+                    if check_cond(row_dict.get("Sales Growth % (YoY)"), rule) or check_cond(row_dict.get("Profit Growth % (YoY)"), rule):
+                        is_red = True
+                elif col in row_dict and check_cond(row_dict.get(col), rule):
+                    is_red = True
+            
+            if is_red:
+                row_fill = RED_FILL
+            else:
+                # 2. Check Green Flags
+                for col, rule in COLOR_RULES.get("green", {}).items():
+                    if col == "Growth %":
+                        if check_cond(row_dict.get("Sales Growth % (YoY)"), rule) and check_cond(row_dict.get("Profit Growth % (YoY)"), rule):
+                            green_points += 1
+                    elif col in row_dict and check_cond(row_dict.get(col), rule):
+                        green_points += 1
+                
+                if green_points >= 4:  # If at least 4 bullish indicators are met
+                    row_fill = GREEN_FILL
+                else:
+                    # 3. Check Yellow Flags
+                    for col, rule in COLOR_RULES.get("yellow", {}).items():
+                        if col in row_dict and check_cond(row_dict.get(col), rule):
+                            row_fill = YELLOW_FILL
+
+            # Apply formats to all cells in the row
             for col_idx, (lbl, val) in enumerate(zip(df.columns, row), start=1):
                 cell = ws.cell(row=row_idx, column=col_idx)
-
-                # 1. Formatting Numbers (Currency, %, etc.)
                 if lbl in FMT_MAP:
                     cell.number_format = FMT_MAP[lbl]
-
-                # 2. Color Coding (The Visual 'Alpha')
-                try:
-                    # RS Score > 0 is bullish
-                    if lbl == "RS Score" and val is not None:
-                        if val > 0: cell.fill = GREEN_FILL
-                        elif val < -20: cell.fill = RED_FILL
-                    
-                    # Piotroski F-Score (7-9 is great, 0-3 is weak)
-                    if lbl == "F-Score" and val is not None:
-                        if val >= 7: cell.fill = GREEN_FILL
-                        elif val <= 3: cell.fill = RED_FILL
-                    
-                    # Growth %
-                    if "Growth %" in lbl and val is not None:
-                        if val > 20: cell.fill = GREEN_FILL
-                        elif val < 0: cell.fill = RED_FILL
-                    
-                    # Trend Status
-                    if lbl == "Trend" and val:
-                        if "🚀" in str(val): cell.fill = GREEN_FILL
-                        elif "📉" in str(val): cell.fill = RED_FILL
-
-                    # ROE/ROCE Efficiency
-                    if ("ROE" in lbl or "ROCE" in lbl) and val is not None:
-                        if val > 20: cell.fill = GREEN_FILL
-                        elif val < 10: cell.fill = RED_FILL
-                    
-                    # RSI Oversold/Overbought
-                    if lbl == "RSI" and val is not None:
-                        if val > 70: cell.fill = YELLOW_FILL
-                        elif val < 30: cell.fill = YELLOW_FILL
-
-                    # High Debt or High Pledging
-                    if (lbl == "D/E" and val is not None and val > 2.0): cell.fill = RED_FILL
-                    if (lbl == "Pledged %" and val is not None and val > 25): cell.fill = RED_FILL
-
-                except: pass
+                if row_fill:
+                    cell.fill = row_fill
 
         # 3. Final UI Adjustments (Header Freeze, Column Widths)
         ws.freeze_panes = "A2"
         for ci, lbl in enumerate(df.columns, start=1):
             width = WIDTH_MAP.get(lbl, 12)
             ws.column_dimensions[get_column_letter(ci)].width = width
+
+        # 4. Add Legend Sheet
+        df_legend = pd.DataFrame(LEGEND)
+        df_legend.to_excel(writer, index=False, sheet_name="Legend")
+        ws_legend = writer.sheets["Legend"]
+        ws_legend.column_dimensions["A"].width = 25
+        ws_legend.column_dimensions["B"].width = 45
+        ws_legend.column_dimensions["C"].width = 45
+        ws_legend.column_dimensions["D"].width = 30
 
     log.info(f"Report Successfully Generated! ✨ → {os.path.abspath(OUTPUT_FILE)}")

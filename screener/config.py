@@ -145,3 +145,55 @@ FMT_MAP = {
     "FII %": "0.0",
     "Public %": "0.0",
 }
+
+# ------------------------------------------------------------------
+# Color Thresholds for Row-Level Formatting (used in exporter)
+# ------------------------------------------------------------------
+COLOR_RULES = {
+    "green": {
+        "RS Score": "> 0",
+        "F-Score": ">= 7",
+        "Growth %": "> 20",
+        "ROE 1y %": "> 15",
+        "ROE 3y %": "> 15",
+        "D/E": "< 1.0",
+        "Pledged %": "< 25",
+        "RSI": "30-70",
+    },
+    "red": {
+        "RS Score": "<= 0",
+        "F-Score": "<= 3",
+        "Growth %": "< 0",
+        "ROE 1y %": "< 5",
+        "ROE 3y %": "< 5",
+        "D/E": ">= 2.0",
+        "Pledged %": ">= 25",
+        "RSI": "<= 30 or >= 70",
+    },
+    "yellow": {
+        "RSI": "30-70",
+    },
+}
+
+LEGEND = [
+    {"Column": "Ticker / Name", "Description": "Stock identifier and Company Name", "Importance": "Basic identification", "Color Rule": ""},
+    {"Column": "Trend", "Description": "Technical stage (e.g., Stage 2, Golden Cross)", "Importance": "Identifies stocks in confirmed bullish uptrends", "Color Rule": "Green if Bullish, Red if Bearish"},
+    {"Column": "RS Score", "Description": "Relative Strength vs Nifty 50", "Importance": "Shows outperformance. >0 means it's beating the market.", "Color Rule": "Green if >0, Red if <=0"},
+    {"Column": "F-Score", "Description": "Piotroski Health Score (0-9)", "Importance": "7-9 indicates a strong, high-quality turnaround company.", "Color Rule": "Green if >=7, Red if <=4"},
+    {"Column": "Sales Growth % (YoY)", "Description": "Revenue growth vs Same Quarter Last Year", "Importance": "Confirms if the business is actually expanding.", "Color Rule": "Green if >20%, Red if <0%"},
+    {"Column": "Profit Growth % (YoY)", "Description": "Net Profit growth vs Same Quarter Last Year", "Importance": "Key driver for stock price breakouts.", "Color Rule": "Green if >20%, Red if <0%"},
+    {"Column": "Price", "Description": "Current closing price", "Importance": "Latest market valuation.", "Color Rule": ""},
+    {"Column": "MCap (Cr)", "Description": "Market Capitalization in ₹ Crores", "Importance": "Filters for company size (e.g., >100 Cr).", "Color Rule": ""},
+    {"Column": "P/E / P/B", "Description": "Price-to-Earnings and Price-to-Book", "Importance": "Basic valuation multiples (cheap vs expensive).", "Color Rule": ""},
+    {"Column": "ROE (1y / 3y) %", "Description": "Return on Equity (Latest and 3y Average)", "Importance": "Measures how efficiently the company uses shareholder money.", "Color Rule": "Green if >15%, Red if <5%"},
+    {"Column": "ROCE %", "Description": "Return on Capital Employed", "Importance": "Measures overall profitability of all capital used.", "Color Rule": ""},
+    {"Column": "D/E", "Description": "Debt-to-Equity Ratio", "Importance": "Leverage check. < 1.0 is generally healthy.", "Color Rule": "Green if <1.0, Red if >=2.0"},
+    {"Column": "OPM %", "Description": "Operating Profit Margin", "Importance": "Shows the efficiency of the core business operations.", "Color Rule": ""},
+    {"Column": "Pledged %", "Description": "% of Promoter shares pledged", "Importance": "Warning sign if high (>25%).", "Color Rule": "Green if <25%, Red if >=50%"},
+    {"Column": "RSI", "Description": "Relative Strength Index (14-day)", "Importance": "Shows if the stock is overbought (>70) or oversold (<30).", "Color Rule": "Yellow if between 30 and 70"},
+    {"Column": "Volatility", "Description": "1-year annualized price swings", "Importance": "Higher % means more aggressive price movements.", "Color Rule": ""},
+    {"Column": "50 / 200 DMA", "Description": "Daily Moving Averages", "Importance": "Used to identify support floors and trend direction.", "Color Rule": ""},
+    {"Column": "1y / 3y / 5y Rt %", "Description": "Multi-year Total Returns", "Importance": "Shows historical track record of wealth creation.", "Color Rule": ""},
+    {"Column": "Holdings %", "Description": "Promoter, FII, and Public %", "Importance": "Shows 'Smart Money' (FII) interest vs Retail (Public).", "Color Rule": ""},
+    {"Column": "Sector / Industry", "Description": "Business categorization", "Importance": "Helps group similar companies for comparison.", "Color Rule": ""},
+]
