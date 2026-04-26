@@ -112,10 +112,13 @@ def filter_by_mcap(tickers: list, bhavcopy_prices: dict) -> list:
             if p and sh: 
                 mc = round((p * sh) / 1e7, 1)
                 
+        # Modify the original dictionary in-place so cache saving works
+        t["mkt_cap_cr"] = mc
+        
         if mc and mc < MIN_MCAP_CR: 
             dropped += 1
         else: 
-            kept.append({**t, "mkt_cap_cr": mc})
+            kept.append(t)
             
     log.info(f"MCap filter done: {len(kept)} kept | {dropped} below ₹{MIN_MCAP_CR} Cr")
     return kept
