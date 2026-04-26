@@ -1,15 +1,27 @@
+"""
+Networking and Exchange Scraper Module for BharatQuant.
+
+Handles:
+1. Downloading ticker lists from NSE (CSV) and BSE (API).
+2. Fetching daily Bhavcopy files for both exchanges.
+3. ISIN-based smart matching to align prices across multiple exchanges.
+"""
+
 import io
 import os
 import time
 import zipfile
 import pandas as pd
 from datetime import datetime, timedelta
-from .config import TODAY, log, DATA_DIR
+from .config import TODAY, log, DATA_DIR, MAX_STOCKS_PER_EXCHANGE
 from .utils import SESSION, clean_code
 
 
 def get_last_trading_day(base_date: datetime) -> datetime:
-    """Return the nearest weekday (Mon-Fri) on or before base_date."""
+    """
+    Return the nearest weekday (Mon-Fri) on or before base_date.
+    Used for locating the most recent Bhavcopy file.
+    """
     d = base_date
     while d.weekday() > 4:
         d -= timedelta(days=1)
@@ -17,7 +29,10 @@ def get_last_trading_day(base_date: datetime) -> datetime:
 
 
 def is_stock(name: str, ticker: str) -> bool:
-    """Basic check to exclude ETFs, Funds, and Indices."""
+    """
+    Basic check to exclude ETFs, Funds, and Indices from the processing list.
+    Filters by keywords like 'ETF', 'FUND', 'NIFTY', etc.
+    """
     name = str(name).upper()
     ticker = str(ticker).upper()
     skip = [
@@ -37,11 +52,15 @@ def is_stock(name: str, ticker: str) -> bool:
 
 
 def clean_sym(sym: str) -> str:
-    """Remove $ and other junk from symbols."""
+    """Remove $ and other special characters from exchange symbols."""
     return str(sym).strip().replace("$", "")
 
 
 def get_nse_tickers() -> list:
+    """
+    Fetch the master list of all listed equity symbols from the NSE archive.
+    Saves a raw copy for audit purposes in the data directory.
+    """
     log.info("Fetching NSE ticker list...")
     SESSION.get("https://www.nseindia.com", timeout=10)
     time.sleep(0.5)
@@ -50,7 +69,6 @@ def get_nse_tickers() -> list:
     try:
         r = SESSION.get(url, timeout=20)
         if r.status_code == 200:
-            # Save Raw for Audit
             raw_path = os.path.join(DATA_DIR, "nse_ticker_list.csv")
             with open(raw_path, "wb") as f:
                 f.write(r.content)
@@ -75,6 +93,8 @@ def get_nse_tickers() -> list:
                             "exchange": "NSE",
                         }
                     )
+            if MAX_STOCKS_PER_EXCHANGE and len(out) > MAX_STOCKS_PER_EXCHANGE:
+                out = out[:MAX_STOCKS_PER_EXCHANGE]
             log.info(f"NSE (archive CSV): {len(out)} tickers")
             return out
     except Exception as e:
@@ -83,6 +103,10 @@ def get_nse_tickers() -> list:
 
 
 def get_bse_tickers() -> list:
+    """
+    Fetch the master list of all active equity scrips from the BSE API.
+    This call is especially valuable as it provides bulk Market Cap data.
+    """
     log.info("Fetching BSE ticker list...")
     try:
         r = SESSION.get(
@@ -92,7 +116,6 @@ def get_bse_tickers() -> list:
             timeout=25,
         )
         if r.status_code == 200:
-            # Save Raw for Audit
             raw_path = os.path.join(DATA_DIR, "bse_bulk_mcap.json")
             with open(raw_path, "wb") as f:
                 f.write(r.content)
@@ -123,6 +146,8 @@ def get_bse_tickers() -> list:
                             "mkt_cap_cr": mcap_cr,
                         }
                     )
+            if MAX_STOCKS_PER_EXCHANGE and len(out) > MAX_STOCKS_PER_EXCHANGE:
+                out = out[:MAX_STOCKS_PER_EXCHANGE]
             log.info(f"BSE source: JSON API → {len(out)} tickers (including bulk MCap)")
             return out
     except Exception as e:
@@ -131,10 +156,12 @@ def get_bse_tickers() -> list:
 
 
 def fetch_bhavcopy_prices(all_tickers: list) -> dict:
-    """Fetch prices from NSE/BSE and match by ISIN to handle cross-listings."""
+    """
+    Download and process the latest closing prices from both NSE and BSE.
+    Uses ISIN-based matching to ensure that scrips listed on both exchanges 
+    receive the most accurate daily price data available.
+    """
     prices = {}
-
-    # Create an ISIN map for fast lookups: {isin: [tickers]}
     isin_map = {}
     for t in all_tickers:
         isin = t.get("isin")
@@ -145,7 +172,6 @@ def fetch_bhavcopy_prices(all_tickers: list) -> dict:
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
     }
 
-    # Helper to apply prices via ISIN or Code
     def apply_row(row, code_col, isin_col, close_col, exchange_suffix):
         nonlocal prices
         count = 0
@@ -154,7 +180,6 @@ def fetch_bhavcopy_prices(all_tickers: list) -> dict:
             if p <= 0:
                 return 0
 
-            # Match 1: By ISIN (Best for cross-listed like NEAGI)
             isin = str(row.get(isin_col, "")).strip()
             if isin and isin in isin_map:
                 for tk in isin_map[isin]:
@@ -162,7 +187,6 @@ def fetch_bhavcopy_prices(all_tickers: list) -> dict:
                         prices[tk] = p
                         count += 1
 
-            # Match 2: By Code (Direct match)
             code = clean_code(row[code_col])
             if code:
                 tk = f"{code}{exchange_suffix}"
@@ -194,45 +218,25 @@ def fetch_bhavcopy_prices(all_tickers: list) -> dict:
                 log.info(f"NSE Raw File Saved (Excel): {save_path}")
 
                 df.columns = df.columns.str.strip()
-                code_col = next(
-                    (c for c in df.columns if c.upper() in ("TCKRSYMB", "SYMBOL")), None
-                )
+                code_col = next((c for c in df.columns if c.upper() in ("TCKRSYMB", "SYMBOL")), None)
                 isin_col = next((c for c in df.columns if c.upper() == "ISIN"), None)
-                close_col = next(
-                    (
-                        c
-                        for c in df.columns
-                        if c.upper() in ("CLSPRIC", "CLOSE_PRICE", "CLOSE")
-                    ),
-                    None,
-                )
+                close_col = next((c for c in df.columns if c.upper() in ("CLSPRIC", "CLOSE_PRICE", "CLOSE")), None)
 
                 if code_col and close_col:
                     added = 0
                     for _, row in df.iterrows():
                         added += apply_row(row, code_col, isin_col, close_col, ".NS")
-                    log.info(
-                        f"NSE (CM) prices added for {d.strftime('%d-%b-%Y')}: {added}"
-                    )
-        except:
-            pass
+                    log.info(f"NSE (CM) prices added for {d.strftime('%d-%b-%Y')}: {added}")
+                    break
+        except: pass
 
     # ── BSE bhavcopy ─────────────────────────────────────────────────────
     for days_back in range(4):
         d = TODAY - timedelta(days=days_back)
         ds_yyyy = d.strftime("%Y%m%d")
-        ds_short = d.strftime("%d%m%y")
-
         url_cm = f"https://www.bseindia.com/download/BhavCopy/Equity/BhavCopy_BSE_CM_0_0_0_{ds_yyyy}_F_0000.CSV"
         try:
-            r = SESSION.get(
-                url_cm,
-                headers={
-                    "Referer": "https://www.bseindia.com/markets/marketinfo/bhavcopy.aspx",
-                    **HEADERS,
-                },
-                timeout=15,
-            )
+            r = SESSION.get(url_cm, headers={"Referer": "https://www.bseindia.com/", **HEADERS}, timeout=15)
             if r.status_code == 200:
                 df = pd.read_csv(io.BytesIO(r.content), dtype=str)
                 save_path = os.path.join(DATA_DIR, f"bse_bhavcopy_{ds_yyyy}.xlsx")
@@ -240,83 +244,17 @@ def fetch_bhavcopy_prices(all_tickers: list) -> dict:
                 log.info(f"BSE Raw File Saved (Excel): {save_path}")
 
                 df.columns = df.columns.str.strip()
-                code_col = next(
-                    (
-                        c
-                        for c in df.columns
-                        if c.upper() in ("FININSTRMID", "SC_CODE", "SCRIP_CD", "CODE")
-                    ),
-                    None,
-                )
+                code_col = next((c for c in df.columns if c.upper() in ("FININSTRMID", "SC_CODE", "SCRIP_CD", "CODE")), None)
                 isin_col = next((c for c in df.columns if c.upper() == "ISIN"), None)
-                close_col = next(
-                    (
-                        c
-                        for c in df.columns
-                        if c.upper() in ("CLSPRIC", "CLOSE_PRICE", "CLOSE")
-                    ),
-                    None,
-                )
+                close_col = next((c for c in df.columns if c.upper() in ("CLSPRIC", "CLOSE_PRICE", "CLOSE")), None)
 
                 if code_col and close_col:
                     added = 0
                     for _, row in df.iterrows():
                         added += apply_row(row, code_col, isin_col, close_col, ".BO")
-                    log.info(
-                        f"BSE (CM) prices added for {d.strftime('%d-%b-%Y')}: {added}"
-                    )
-        except:
-            pass
-
-        # Legacy ZIP Fallback
-        for p in [f"EQ_{ds_short}_CSV.ZIP", f"EQ{ds_short}_CSV.ZIP"]:
-            url_zip = f"https://www.bseindia.com/download/BhavCopy/Equity/{p}"
-            try:
-                r = SESSION.get(
-                    url_zip,
-                    headers={
-                        "Referer": "https://www.bseindia.com/markets/marketinfo/bhavcopy.aspx",
-                        **HEADERS,
-                    },
-                    timeout=15,
-                )
-                if r.status_code == 200 and b"PK\x03\x04" in r.content[:10]:
-                    z = zipfile.ZipFile(io.BytesIO(r.content))
-                    csv_name = [n for n in z.namelist() if n.lower().endswith(".csv")][
-                        0
-                    ]
-                    content = z.read(csv_name)
-                    df = pd.read_csv(io.BytesIO(content), dtype=str)
-                    save_path = os.path.join(
-                        DATA_DIR, f"bse_legacy_bhavcopy_{ds_short}.xlsx"
-                    )
-                    df.to_excel(save_path, index=False)
-                    log.info(f"BSE Legacy File Saved (Excel): {save_path}")
-
-                    df.columns = df.columns.str.strip()
-                    code_col = next(
-                        (c for c in df.columns if c.upper() in ("CODE", "FININSTRMID")),
-                        None,
-                    )
-                    isin_col = next(
-                        (c for c in df.columns if c.upper() == "ISIN"), None
-                    )
-                    close_col = next(
-                        (c for c in df.columns if c.upper() in ("CLOSE", "CLSPRIC")),
-                        None,
-                    )
-                    if code_col and close_col:
-                        added = 0
-                        for _, row in df.iterrows():
-                            added += apply_row(
-                                row, code_col, isin_col, close_col, ".BO"
-                            )
-                        log.info(
-                            f"BSE (ZIP) prices added for {d.strftime('%d-%b-%Y')}: {added}"
-                        )
-                        break
-            except:
-                pass
+                    log.info(f"BSE (CM) prices added for {d.strftime('%d-%b-%Y')}: {added}")
+                    break
+        except: pass
 
     log.info(f"Bhavcopy total: {len(prices)} unique closing prices loaded")
     return prices

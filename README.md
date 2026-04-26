@@ -1,4 +1,7 @@
-# BharatQuant
+<div align="center">
+  <h1>📈 BharatQuant</h1>
+  <p><b>Professional NSE + BSE Quantitative Stock Screener</b></p>
+</div>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -46,7 +49,7 @@ The generated report at `data/nse_bse_screener.xlsx` contains the following metr
 
 1. **Install Dependencies**:
    ```bash
-   pip install pandas yfinance openpyxl requests black
+   pip install -r requirements.txt
    ```
 2. **Run the Screener**:
    ```bash

@@ -1,3 +1,13 @@
+"""
+Financial Analysis and Metric Extraction Module for BharatQuant.
+
+Handles:
+1. Fetching Balance Sheets, Cash Flows, and Income Statements from Yahoo Finance.
+2. Calculating the Piotroski F-Score (0-9 scale) for quality assessment.
+3. Extracting YoY Quarterly Sales and Profit Growth percentages.
+4. Managing a 14-day financial cache to speed up repeated runs.
+"""
+
 import time
 import random
 import pandas as pd
@@ -10,9 +20,6 @@ from .calculations import (
     price_n_days,
     calc_rsi,
     rolling_vol,
-    vol_spike_pct,
-    prev_vol_pct,
-    price_spike_pct,
     dma_n,
     get_trend_signal,
     quarterly_flags,
@@ -21,7 +28,10 @@ from .calculations import (
 
 
 def fetch_prices_batch(batch: list[str], attempt=0) -> dict:
-    """Download up to 5y of daily Close+Volume for a batch of tickers."""
+    """
+    Download up to 5 years of daily Close and Volume data for a batch of tickers.
+    Includes exponential backoff and retry logic to handle Yahoo Finance rate limits.
+    """
     if not batch:
         return {}
     try:
@@ -75,7 +85,10 @@ def fetch_prices_batch(batch: list[str], attempt=0) -> dict:
 
 
 def fetch_shares_outstanding(tickers: list) -> dict:
-    """Fetch shares_outstanding for every ticker via parallel .info calls."""
+    """
+    Fetch shares_outstanding for a list of tickers via parallel .info calls.
+    Used as a fallback when 'Smart Population' in main.py cannot calculate shares.
+    """
     n = len(tickers)
     log.info(f"Fetching shares_outstanding for {n} tickers ({INFO_WORKERS} workers)...")
 
@@ -107,7 +120,12 @@ def fetch_shares_outstanding(tickers: list) -> dict:
     return result
 
 
-def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: float = 0) -> dict:
+def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: float = 0.0) -> dict:
+    """
+    Perform deep analysis on a single stock.
+    Combines cached financial data with fresh technical signals.
+    Calculates: RS Score, F-Score, Trend, Growth %, Valuation Multiples, etc.
+    """
     ticker_sym = stock["ticker"]
     pd_s = price_data.get(ticker_sym, {})
     close = normalise(pd_s.get("Close", pd.Series(dtype=float)))
@@ -116,7 +134,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     if cp is None and not close.empty:
         cp = round(float(close.iloc[-1]), 2)
 
-    # 1. Financial Cache
+    # 1. Financial Cache Management
     cache = stock.get("financials_cache")
     is_fresh = False
     if cache:
@@ -132,6 +150,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
         growth = cache.get("growth", {})
         f_score = cache.get("f_score")
     else:
+        # Fetch fresh deep financials
         info = {}
         roe3y = None
         growth = {}
@@ -140,7 +159,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
             yt = yf.Ticker(ticker_sym)
             info = yt.info or {}
             
-            # Annual Stats
+            # Annual Quality Stats (ROE 3y)
             af = yt.financials
             bs = yt.balance_sheet
             cf = yt.cashflow
@@ -155,7 +174,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
                     roes = [sf(ni_r[c]) / sf(se_r[c]) * 100 for c in af.columns[:3] if sf(ni_r[c]) and sf(se_r[c]) and sf(se_r[c]) != 0]
                     roe3y = round(sum(roes) / len(roes), 1) if roes else None
             
-            # F-Score calculation
+            # Piotroski F-Score calculation
             f_score = calc_piotroski_score(af, bs, cf)
             
             # Quarterly Growth (YoY)
@@ -179,7 +198,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
             }
         except: pass
 
-    # 2. Tech Data
+    # 2. Technical Data (Always Fresh)
     p1y = price_n_days(close, 365)
     ret1y = pct_ret(cp, p1y)
     rs_score = round(ret1y - index_return_1y, 1) if (ret1y is not None) else None
@@ -187,7 +206,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     dma200 = dma_n(close, 200)
     trend = get_trend_signal(cp, dma50, dma200)
 
-    # 3. Financial Extractions
+    # 3. Financial Metric Extraction
     def to_cr(v): return round(float(v) / 1e7, 0) if v else None
     mkt_cap = sf(info.get("marketCap"))
     mcap_cr = to_cr(mkt_cap)
@@ -219,7 +238,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     curr_l = sf(info.get("currentLiabilities") or info.get("totalCurrentLiabilities"))
     roce = round(ebit / (tot_a - curr_l) * 100, 1) if (ebit and tot_a and curr_l and (tot_a - curr_l) != 0) else None
 
-    # Performance
+    # Multi-period Returns
     p1d = price_n_days(close, 1)
     p1w = price_n_days(close, 7)
     p1m = price_n_days(close, 30)

@@ -1,140 +1,100 @@
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+"""
+Excel Export and Formatting Module for BharatQuant.
+
+Handles:
+1. Converting analytical results into a structured Pandas DataFrame.
+2. Generating a professional Excel (.xlsx) file.
+3. Applying color-coded conditional formatting for Bullish (Green) and Bearish (Red) signals.
+4. Setting column widths and number formats (Currency, %, Multiples).
+"""
+
+import pandas as pd
+import os
+from datetime import datetime
+from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
-from .config import log, OUTPUT_FILE, HEADER_LABELS, WIDTH_MAP, FMT_MAP
+from .config import log, OUTPUT_FILE, HEADER_LABELS, WIDTH_MAP, FMT_MAP, TODAY
 
-HEADER_BG = "1F3864"
-NSE_BG = "EBF5FB"
-BSE_BG = "FEF9E7"
-G_FILL = PatternFill("solid", fgColor="C6EFCE")
-R_FILL = PatternFill("solid", fgColor="FFC7CE")
-Y_FILL = PatternFill("solid", fgColor="FFEB9C")
-THIN = Border(
-    left=Side(style="thin", color="D3D3D3"),
-    right=Side(style="thin", color="D3D3D3"),
-    bottom=Side(style="thin", color="D3D3D3"),
-)
-
-COLOUR_RULES = {
-    **{
-        c: [(lambda v: v > 0, G_FILL, "276221"), (lambda v: v < 0, R_FILL, "9C0006")]
-        for c in [
-            "1d Rt %",
-            "1w Rt %",
-            "1m Rt %",
-            "3m Rt %",
-            "1y Rt %",
-            "3y Rt %",
-            "5y Rt %",
-            "RS Score",
-        ]
-    },
-    "F-Score": [
-        (lambda v: v >= 7, G_FILL, "276221"),
-        (lambda v: v <= 3, R_FILL, "9C0006"),
-    ],
-    "Sales Growth % (YoY)": [
-        (lambda v: v >= 20, G_FILL, "276221"),
-        (lambda v: v < 0, R_FILL, "9C0006"),
-    ],
-    "Profit Growth % (YoY)": [
-        (lambda v: v >= 20, G_FILL, "276221"),
-        (lambda v: v < 0, R_FILL, "9C0006"),
-    ],
-    "Trend": [
-        (lambda v: v == "Stage 2", G_FILL, "276221"),
-        (lambda v: v == "Death Cross", R_FILL, "9C0006"),
-    ],
-    "RSI": [
-        (lambda v: 40 <= v <= 60, G_FILL, "276221"),
-        (lambda v: v > 70, R_FILL, "9C0006"),
-        (lambda v: v < 30, Y_FILL, "7D5A00"),
-    ],
-    "P/E": [
-        (lambda v: 0 < v <= 20, G_FILL, "276221"),
-        (lambda v: v > 50, R_FILL, "9C0006"),
-    ],
-    "ROE 1y %": [
-        (lambda v: v >= 15, G_FILL, "276221"),
-        (lambda v: v < 0, R_FILL, "9C0006"),
-    ],
-    "ROE 3y %": [
-        (lambda v: v >= 15, G_FILL, "276221"),
-        (lambda v: v < 0, R_FILL, "9C0006"),
-    ],
-    "ROCE %": [
-        (lambda v: v >= 15, G_FILL, "276221"),
-        (lambda v: v < 0, R_FILL, "9C0006"),
-    ],
-    "D/E": [(lambda v: v < 1, G_FILL, "276221"), (lambda v: v > 3, R_FILL, "9C0006")],
-    "OPM %": [
-        (lambda v: v > 20, G_FILL, "276221"),
-        (lambda v: v < 0, R_FILL, "9C0006"),
-    ],
-    "Pledged %": [(lambda v: v > 25, R_FILL, "9C0006")],
-}
-
-LEFT_COLS = {"Ticker", "Name", "Sector", "Industry", "Trend"}
+# Define Colors for UI Highlighting
+GREEN_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+RED_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+YELLOW_FILL = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
 
 
-def apply_colour(cell, col, val):
-    for cond, fill, fc in COLOUR_RULES.get(col, []):
-        try:
-            if cond(val):
-                cell.fill = fill
-                cell.font = Font(name="Arial", size=8, color=fc)
-                return
-        except:
-            pass
-
-
-def write_excel(rows: list[dict]):
+def write_excel(rows: list):
+    """
+    Export the processed stock data to an Excel file with advanced formatting.
+    Applies conditional colors:
+    - 🟩 Green for high RS Scores, high F-Scores, and Strong Growth.
+    - 🟥 Red for poor growth, high debt, or high share pledging.
+    """
     if not rows:
-        log.warning("No data to write.")
+        log.warning("No data rows to write to Excel.")
         return
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Screener"
-    ws.freeze_panes = "G2"
+    log.info(f"Generating professional report: {OUTPUT_FILE}...")
+    df = pd.DataFrame(rows)
 
-    # Header
-    hfill = PatternFill("solid", fgColor=HEADER_BG)
-    hfont = Font(bold=True, color="FFFFFF", name="Arial", size=9)
-    for ci, lbl in enumerate(HEADER_LABELS, 1):
-        c = ws.cell(row=1, column=ci, value=lbl)
-        c.fill = hfill
-        c.font = hfont
-        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        c.border = THIN
-        ws.column_dimensions[get_column_letter(ci)].width = WIDTH_MAP.get(lbl, 12)
-    ws.row_dimensions[1].height = 44
+    # Ensure columns match the configuration order
+    cols_to_use = [c for c in HEADER_LABELS if c in df.columns]
+    df = df[cols_to_use]
 
-    # Data
-    for ri, row in enumerate(rows, 2):
-        ticker = row.get("Ticker", "")
-        exch = "NSE" if ticker and ticker.endswith(".NS") else "BSE"
-        row_bg = PatternFill("solid", fgColor=NSE_BG if exch == "NSE" else BSE_BG)
+    # Save to Excel
+    with pd.ExcelWriter(OUTPUT_FILE, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Screener")
+        ws = writer.sheets["Screener"]
 
-        for ci, lbl in enumerate(HEADER_LABELS, 1):
-            val = row.get(lbl)
-            c = ws.cell(row=ri, column=ci, value=val)
-            c.fill = row_bg
-            c.font = Font(name="Arial", size=8)
-            c.border = THIN
-            c.alignment = Alignment(
-                horizontal="left" if lbl in LEFT_COLS else "center", vertical="center"
-            )
-            fmt = FMT_MAP.get(lbl)
-            if fmt and fmt != "@":
-                c.number_format = fmt
-            if val is not None:
-                apply_colour(c, lbl, val)
+        # Apply Formatting
+        for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+            for col_idx, (lbl, val) in enumerate(zip(df.columns, row), start=1):
+                cell = ws.cell(row=row_idx, column=col_idx)
 
-    last_col = get_column_letter(len(HEADER_LABELS))
-    ws.auto_filter.ref = f"A1:{last_col}1"
+                # 1. Formatting Numbers (Currency, %, etc.)
+                if lbl in FMT_MAP:
+                    cell.number_format = FMT_MAP[lbl]
 
-    wb.save(OUTPUT_FILE)
-    log.info(
-        f"\n✅  Saved → {OUTPUT_FILE}  ({len(rows)} rows × {len(HEADER_LABELS)} cols)"
-    )
+                # 2. Color Coding (The Visual 'Alpha')
+                try:
+                    # RS Score > 0 is bullish
+                    if lbl == "RS Score" and val is not None:
+                        if val > 0: cell.fill = GREEN_FILL
+                        elif val < -20: cell.fill = RED_FILL
+                    
+                    # Piotroski F-Score (7-9 is great, 0-3 is weak)
+                    if lbl == "F-Score" and val is not None:
+                        if val >= 7: cell.fill = GREEN_FILL
+                        elif val <= 3: cell.fill = RED_FILL
+                    
+                    # Growth %
+                    if "Growth %" in lbl and val is not None:
+                        if val > 20: cell.fill = GREEN_FILL
+                        elif val < 0: cell.fill = RED_FILL
+                    
+                    # Trend Status
+                    if lbl == "Trend" and val:
+                        if "🚀" in str(val): cell.fill = GREEN_FILL
+                        elif "📉" in str(val): cell.fill = RED_FILL
+
+                    # ROE/ROCE Efficiency
+                    if ("ROE" in lbl or "ROCE" in lbl) and val is not None:
+                        if val > 20: cell.fill = GREEN_FILL
+                        elif val < 10: cell.fill = RED_FILL
+                    
+                    # RSI Oversold/Overbought
+                    if lbl == "RSI" and val is not None:
+                        if val > 70: cell.fill = YELLOW_FILL
+                        elif val < 30: cell.fill = YELLOW_FILL
+
+                    # High Debt or High Pledging
+                    if (lbl == "D/E" and val is not None and val > 2.0): cell.fill = RED_FILL
+                    if (lbl == "Pledged %" and val is not None and val > 25): cell.fill = RED_FILL
+
+                except: pass
+
+        # 3. Final UI Adjustments (Header Freeze, Column Widths)
+        ws.freeze_panes = "A2"
+        for ci, lbl in enumerate(df.columns, start=1):
+            width = WIDTH_MAP.get(lbl, 12)
+            ws.column_dimensions[get_column_letter(ci)].width = width
+
+    log.info(f"Report Successfully Generated! ✨ → {os.path.abspath(OUTPUT_FILE)}")

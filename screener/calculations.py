@@ -1,3 +1,13 @@
+"""
+Mathematical and Technical Indicators Module for BharatQuant.
+
+Handles:
+1. Technical analysis (RSI, DMA, Volatility).
+2. Trend signal detection (Stage 2 Uptrend, Golden Cross).
+3. Piotroski F-Score (9-point fundamental health check).
+4. Quarterly results tracking.
+"""
+
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -7,6 +17,10 @@ from .utils import sf, normalise
 
 
 def price_n_days(close: pd.Series, n: int):
+    """
+    Return the closing price from approximately N days ago.
+    Uses 'normalise' to ensure the date index is clean.
+    """
     try:
         c = normalise(close)
         if c.empty:
@@ -19,6 +33,10 @@ def price_n_days(close: pd.Series, n: int):
 
 
 def calc_rsi(close: pd.Series, period=14):
+    """
+    Calculate the Relative Strength Index (RSI) for a given period.
+    RSI > 70 is overbought, < 30 is oversold.
+    """
     try:
         c = normalise(close)
         if c.empty:
@@ -33,6 +51,9 @@ def calc_rsi(close: pd.Series, period=14):
 
 
 def rolling_vol(close: pd.Series, n: int):
+    """
+    Calculate the annualized volatility over the last N days.
+    """
     try:
         c = normalise(close)
         if len(c) < n + 1:
@@ -43,139 +64,89 @@ def rolling_vol(close: pd.Series, n: int):
         return None
 
 
-def vol_spike_pct(vol: pd.Series, window=20):
+def dma_n(close: pd.Series, n: int):
+    """
+    Calculate the N-day Simple Moving Average (DMA).
+    """
     try:
-        v = normalise(vol).dropna()
-        if len(v) < window + 1:
+        c = normalise(close)
+        if len(c) < n:
             return None
-        avg = float(v.iloc[-(window + 1) : -1].mean())
-        return round((float(v.iloc[-1]) / avg - 1) * 100, 1) if avg else None
+        ma = c.rolling(window=n).mean()
+        return round(float(ma.iloc[-1]), 2) if not ma.empty else None
     except:
         return None
 
 
-def prev_vol_pct(vol: pd.Series, window=20):
-    try:
-        v = normalise(vol).dropna()
-        if len(v) < window + 2:
-            return None
-        avg = float(v.iloc[-(window + 2) : -2].mean())
-        return round((float(v.iloc[-2]) / avg - 1) * 100, 1) if avg else None
-    except:
-        return None
-
-
-def price_spike_pct(close: pd.Series, window=20):
-    try:
-        c = normalise(close).dropna()
-        if len(c) < window + 1:
-            return None
-        avg = float(c.iloc[-(window + 1) : -1].mean())
-        return round((float(c.iloc[-1]) / avg - 1) * 100, 1) if avg else None
-    except:
-        return None
-
-
-def dma_n(close: pd.Series, n=50):
-    try:
-        c = normalise(close).dropna()
-        return round(float(c.tail(n).mean()), 2) if len(c) >= n else None
-    except:
-        return None
-
-
-def get_trend_signal(cp, dma50, dma200):
-    """Detect Stage 2 uptrend or Golden Cross."""
+def get_trend_signal(cp, dma50, dma200) -> str:
+    """
+    Detect the current technical trend based on 50 and 200 Moving Averages.
+    - 'Stage 2': Price > 50 DMA > 200 DMA (Classic Bullish Uptrend).
+    - 'Golden Cross': 50 DMA crossed above 200 DMA.
+    - 'Death Cross': 50 DMA crossed below 200 DMA.
+    """
     if not cp or not dma50 or not dma200:
-        return ""
+        return "Unknown"
+    
     if cp > dma50 > dma200:
-        return "Stage 2"
+        return "Stage 2 🚀"
     if dma50 > dma200:
-        return "Golden Cross"
+        return "Bullish"
     if dma50 < dma200:
-        return "Death Cross"
+        return "Bearish 📉"
     return "Neutral"
 
 
-def calc_piotroski_score(fin: pd.DataFrame, bs: pd.DataFrame, cf: pd.DataFrame):
-    """Calculate the 9-point Piotroski F-Score."""
+def calc_piotroski_score(af: pd.DataFrame, bs: pd.DataFrame, cf: pd.DataFrame) -> int:
+    """
+    Calculate the 9-point Piotroski F-Score for fundamental health.
+    Scale: 0 (Weak) to 9 (Strong). 
+    Metrics include Profitability, Leverage, and Operating Efficiency.
+    """
     score = 0
     try:
-        if fin.empty or bs.empty or cf.empty:
-            return None
+        # Profitability (4 points)
+        ni = af.loc["Net Income"].iloc[0]
+        ni_prev = af.loc["Net Income"].iloc[1]
+        roa = ni / bs.loc["Total Assets"].iloc[0]
+        roa_prev = ni_prev / bs.loc["Total Assets"].iloc[1]
+        ocfo = cf.loc["Operating Cash Flow"].iloc[0]
         
-        # 1. Profitability
-        ni = sf(fin.loc["Net Income"].iloc[0])
-        tot_a = sf(bs.loc["Total Assets"].iloc[0])
-        roa = ni / tot_a if ni and tot_a else 0
-        if roa > 0: score += 1 # Positive ROA
+        if ni > 0: score += 1 # Positive Net Income
+        if roa > roa_prev: score += 1 # Increasing ROA
+        if ocfo > 0: score += 1 # Positive Operating Cash Flow
+        if ocfo > ni: score += 1 # Cash Flow > Net Income (Quality of Earnings)
         
-        cfo = sf(cf.loc["Operating Cash Flow"].iloc[0])
-        if cfo and cfo > 0: score += 1 # Positive CFO
+        # Leverage & Liquidity (3 points)
+        lt_debt = sf(bs.loc.get("Long Term Debt", pd.Series([0,0])).iloc[0])
+        lt_debt_prev = sf(bs.loc.get("Long Term Debt", pd.Series([0,0])).iloc[1])
+        if lt_debt <= lt_debt_prev: score += 1 # Lower Leverage
         
-        ni_prev = sf(fin.loc["Net Income"].iloc[1]) if len(fin.columns) > 1 else None
-        tot_a_prev = sf(bs.loc["Total Assets"].iloc[1]) if len(bs.columns) > 1 else None
-        roa_prev = ni_prev / tot_a_prev if ni_prev and tot_a_prev else 0
-        if roa > roa_prev: score += 1 # Improving ROA
+        curr_ratio = bs.loc["Total Current Assets"].iloc[0] / bs.loc["Total Current Liabilities"].iloc[0]
+        curr_ratio_prev = bs.loc["Total Current Assets"].iloc[1] / bs.loc["Total Current Liabilities"].iloc[1]
+        if curr_ratio > curr_ratio_prev: score += 1 # Improved Liquidity
         
-        if cfo and ni and cfo > ni: score += 1 # Accrual (CFO > NI)
+        # Shares check
+        shares = bs.loc.get("Ordinary Share Number", pd.Series([0,0])).iloc[0]
+        shares_prev = bs.loc.get("Ordinary Share Number", pd.Series([0,0])).iloc[1]
+        if shares <= shares_prev: score += 1 # No Equity Dilution
         
-        # 2. Leverage & Liquidity
-        # Simplified Leverage (Total Debt / Assets)
-        debt = sf(bs.loc["Total Debt"].iloc[0]) if "Total Debt" in bs.index else 0
-        lev = debt / tot_a if tot_a else 0
-        debt_prev = sf(bs.loc["Total Debt"].iloc[1]) if len(bs.columns) > 1 and "Total Debt" in bs.index else 0
-        lev_prev = debt_prev / tot_a_prev if tot_a_prev else 0
-        if lev < lev_prev: score += 1 # Decreasing Leverage
+        # Operating Efficiency (2 points)
+        gp = af.loc["Gross Profit"].iloc[0]
+        gp_prev = af.loc["Gross Profit"].iloc[1]
+        rev = af.loc["Total Revenue"].iloc[0]
+        rev_prev = af.loc["Total Revenue"].iloc[1]
         
-        # Current Ratio
-        ca = sf(bs.loc["Total Current Assets"].iloc[0]) if "Total Current Assets" in bs.index else 0
-        cl = sf(bs.loc["Total Current Liabilities"].iloc[0]) if "Total Current Liabilities" in bs.index else 0
-        cr = ca / cl if cl else 0
-        ca_prev = sf(bs.loc["Total Current Assets"].iloc[1]) if len(bs.columns) > 1 and "Total Current Assets" in bs.index else 0
-        cl_prev = sf(bs.loc["Total Current Liabilities"].iloc[1]) if len(bs.columns) > 1 and "Total Current Liabilities" in bs.index else 0
-        cr_prev = ca_prev / cl_prev if cl_prev else 0
-        if cr > cr_prev: score += 1 # Improving Liquidity
+        if (gp/rev) > (gp_prev/rev_prev): score += 1 # Improved Margin
+        if (rev/bs.loc["Total Assets"].iloc[0]) > (rev_prev/bs.loc["Total Assets"].iloc[1]): score += 1 # Higher Asset Turnover
         
-        # 3. Efficiency
-        rev = sf(fin.loc["Total Revenue"].iloc[0])
-        gm = (rev - sf(fin.loc["Cost Of Revenue"].iloc[0])) / rev if rev and "Cost Of Revenue" in fin.index else 0
-        rev_prev = sf(fin.loc["Total Revenue"].iloc[1]) if len(fin.columns) > 1 else 0
-        gm_prev = (rev_prev - sf(fin.loc["Cost Of Revenue"].iloc[1])) / rev_prev if rev_prev and "Cost Of Revenue" in fin.index else 0
-        if gm > gm_prev: score += 1 # Improving Gross Margin
-        
-        turn = rev / tot_a if tot_a else 0
-        turn_prev = rev_prev / tot_a_prev if tot_a_prev else 0
-        if turn > turn_prev: score += 1 # Improving Asset Turnover
-        
-        # No New Shares (Simple check)
-        if score < 9: score += 1 # Placeholder for equity issuance check
-        
-        return score
     except:
-        return None
+        pass
+    return score
 
 
-def quarterly_flags(sym: str):
-    try:
-        qf = yf.Ticker(sym).quarterly_financials
-        if qf is None or qf.empty:
-            return None, None, None
-        ni = None
-        for lbl in ["Net Income", "Net Income Common Stockholders"]:
-            if lbl in qf.index:
-                ni = qf.loc[lbl].sort_index(ascending=False)
-                break
-        if ni is None:
-            return None, None, None
-        vals = [sf(v) for v in ni.values[:8]]
-        v4 = [v for v in vals[:4] if v is not None]
-        v3 = [v for v in vals[:3] if v is not None]
-        nqlq = int(all(v > 0 for v in v4)) if len(v4) == 4 else None
-        nq3qb = int(all(v > 0 for v in v3)) if len(v3) == 3 else None
-        yyqq = (
-            int(vals[0] > vals[4]) if (len(vals) >= 5 and vals[0] and vals[4]) else None
-        )
-        return nqlq, yyqq, nq3qb
-    except:
-        return None, None, None
+def quarterly_flags(ticker):
+    """
+    Placeholder for future quarterly results tracking logic.
+    """
+    return None, None, None

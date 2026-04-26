@@ -1,3 +1,12 @@
+"""
+Caching System for BharatQuant.
+
+Manages:
+1. Persistent storage of ticker lists and share counts in JSON format.
+2. TTL (Time-To-Live) logic to refresh exchange data every 14 days.
+3. Thread-safe checkpoint saving during long financial runs.
+"""
+
 import os
 import json
 from datetime import datetime
@@ -5,7 +14,7 @@ from .config import TICKER_CACHE_FILE, TICKER_CACHE_DAYS, SHARES_CACHE_DAYS, log
 
 
 def _read_raw_cache() -> dict:
-    """Read raw cache JSON. Returns {} on any error."""
+    """Read the raw JSON cache file from disk. Returns {} if file is missing or corrupt."""
     if not os.path.exists(TICKER_CACHE_FILE):
         return {}
     try:
@@ -17,7 +26,7 @@ def _read_raw_cache() -> dict:
 
 
 def _cache_age_days(cache: dict, key: str) -> int:
-    """Return age in days of a timestamp key, or 9999 if missing."""
+    """Calculate the age of a specific cache key in days compared to the current time."""
     ts = cache.get(key)
     if not ts:
         return 9999
@@ -27,8 +36,11 @@ def _cache_age_days(cache: dict, key: str) -> int:
         return 9999
 
 
-def load_ticker_cache() -> list:
-    """Return cached ticker list if fresh, else None."""
+def load_cache() -> list:
+    """
+    Return the cached ticker list if it is younger than TICKER_CACHE_DAYS.
+    Otherwise, returns None to trigger a fresh download from the exchanges.
+    """
     cache = _read_raw_cache()
     if not cache:
         return None
@@ -45,7 +57,10 @@ def load_ticker_cache() -> list:
 
 
 def shares_cache_fresh() -> bool:
-    """Return True if shares_outstanding in cache is fresh AND populated."""
+    """
+    Check if the 'shares_outstanding' data in the cache is both recent and sufficiently populated.
+    Triggers a refresh if the data is > 14 days old or if it is mostly empty.
+    """
     cache = _read_raw_cache()
     age = _cache_age_days(cache, "shares_fetched_at")
 
@@ -57,7 +72,6 @@ def shares_cache_fresh() -> bool:
     if not tickers:
         return False
 
-    # Check if we actually have data, not just nulls
     has_shares = sum(1 for t in tickers if t.get("shares_outstanding"))
     if has_shares < (len(tickers) * 0.1):  # If less than 10% have shares
         log.info(
@@ -76,9 +90,10 @@ def save_cache(
     tickers: list, update_tickers: bool = False, update_shares: bool = False
 ):
     """
-    Save ticker list to cache.
+    Write the current ticker list and timestamps to the JSON cache file.
+    Use 'update_tickers' or 'update_shares' to reset the 14-day expiration timer.
     """
-    cache = _read_raw_cache()  # preserve existing timestamps
+    cache = _read_raw_cache()  
     now = datetime.now().isoformat()
 
     if update_tickers:
