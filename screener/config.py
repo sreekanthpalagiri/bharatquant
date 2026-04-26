@@ -67,6 +67,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+log = logging.getLogger("BharatQuant")
 
 # SILENCE library noise
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
