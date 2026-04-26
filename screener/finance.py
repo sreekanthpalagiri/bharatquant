@@ -161,6 +161,9 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
         growth = {}
         f_score = None
         try:
+            # Prevent rate limiting by pacing the workers
+            time.sleep(random.uniform(0.5, 1.5))
+            
             yt = yf.Ticker(ticker_sym)
             info = yt.info or {}
             
@@ -201,7 +204,13 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
                 "growth": growth,
                 "f_score": f_score
             }
-        except: pass
+        except Exception as e:
+            err = str(e).lower()
+            if any(k in err for k in ["rate limit", "too many requests", "429"]):
+                log.warning(f"Rate limited by Yahoo on {ticker_sym}. Sleeping...")
+                time.sleep(5)
+            else:
+                log.warning(f"Failed to fetch financials for {ticker_sym}: {e}")
 
     # 2. Technical Data (Always Fresh)
     p1y = price_n_days(close, 365)
