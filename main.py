@@ -1,6 +1,10 @@
 import time
 import os
 from datetime import datetime
+
+# Mandatory fix for Protobuf on some systems
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 from screener.network import (
     download_nse_tickers,
     download_bse_bulk_mcap,
