@@ -115,6 +115,7 @@ def main():
         return
 
     # ── Step 5: Shares outstanding (Smart Population) ────────────────────
+    master_map = {t["ticker"]: t for t in all_tickers}
     populated_count = 0
     for t in unique:
         tk = t["ticker"]
@@ -124,6 +125,11 @@ def main():
             if mc_cr and price and price > 0:
                 shares = int((mc_cr * 1e7) / price)
                 t["shares_outstanding"] = shares
+                
+                # IMPORTANT: Update the original master list so it saves to the cache
+                if tk in master_map:
+                    master_map[tk]["shares_outstanding"] = shares
+                    
                 populated_count += 1
 
     if populated_count > 0:
