@@ -1,0 +1,106 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Invoices | BharatQuant{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-6xl mx-auto">
+    <header class="flex justify-between items-end mb-8">
+        <div>
+            <h1 class="text-2xl font-semibold text-on-surface mb-1">Invoices</h1>
+            <p class="text-neutral-500">Manage your billing history and subscription payments.</p>
+        </div>
+        <div class="flex gap-3">
+            <button class="px-4 py-2 bg-neutral-900 text-neutral-300 font-['JetBrains Mono'] text-xs border border-neutral-800 hover:border-neutral-600 transition-all flex items-center gap-2 uppercase">
+                <span class="material-symbols-outlined text-sm">filter_list</span>
+                FILTER
+            </button>
+            <button class="px-4 py-2 bg-primary text-on-primary font-['JetBrains Mono'] text-xs hover:brightness-110 transition-all flex items-center gap-2 uppercase">
+                <span class="material-symbols-outlined text-sm">cloud_download</span>
+                EXPORT ALL
+            </button>
+        </div>
+    </header>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-neutral-500 font-['JetBrains Mono'] text-xs uppercase tracking-wider">Current Plan</span>
+                <span class="material-symbols-outlined text-green-500">verified</span>
+            </div>
+            <div class="text-xl font-semibold mb-1">{{ current_user.subscription_plan|title }}</div>
+            <div class="font-['JetBrains Mono'] text-sm text-green-500">{{ current_user.subscription_status|title }}</div>
+        </div>
+        
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-neutral-500 font-['JetBrains Mono'] text-xs uppercase tracking-wider">Total Spent</span>
+                <span class="material-symbols-outlined text-neutral-500">payments</span>
+            </div>
+            <div class="text-xl font-semibold mb-1">₹{{ invoices|sum(attribute='amount')|default(0, true)|round(2) }}</div>
+            <div class="font-['JetBrains Mono'] text-sm text-neutral-400">All time</div>
+        </div>
+        
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-neutral-500 font-['JetBrains Mono'] text-xs uppercase tracking-wider">Total Invoices</span>
+                <span class="material-symbols-outlined text-neutral-500">receipt_long</span>
+            </div>
+            <div class="text-xl font-semibold mb-1">{{ invoices|length }}</div>
+            <div class="font-['JetBrains Mono'] text-sm text-neutral-400">{{ invoices|selectattr('status', 'equalto', 'paid')|list|length }} paid</div>
+        </div>
+    </div>
+    
+    {% if invoices %}
+    <div class="bg-[#111111] border border-[#2a2a2a] overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-[#111111] border-b-2 border-[#2a2a2a]">
+                    <tr>
+                        <th class="px-6 py-4 font-['JetBrains Mono'] text-xs text-neutral-500 uppercase tracking-wider">Invoice #</th>
+                        <th class="px-6 py-4 font-['JetBrains Mono'] text-xs text-neutral-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-4 font-['JetBrains Mono'] text-xs text-neutral-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-4 font-['JetBrains Mono'] text-xs text-neutral-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 font-['JetBrains Mono'] text-xs text-neutral-500 uppercase tracking-wider text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="font-['JetBrains Mono'] text-sm">
+                    {% for invoice in invoices %}
+                    <tr class="border-b border-[#2a2a2a] hover:bg-[#1a1a1a] transition-colors">
+                        <td class="px-6 py-4 text-neutral-100 font-bold">{{ invoice.invoice_number }}</td>
+                        <td class="px-6 py-4 text-neutral-400">{{ invoice.billing_date.strftime('%b %d, %Y') }}</td>
+                        <td class="px-6 py-4 text-neutral-100">₹{{ invoice.amount }}</td>
+                        <td class="px-6 py-4">
+                            {% if invoice.status == 'paid' %}
+                            <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-primary-container text-on-primary-container">Paid</span>
+                            {% elif invoice.status == 'pending' %}
+                            <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-tertiary-container/20 text-tertiary">Pending</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-neutral-800 text-neutral-400">{{ invoice.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            {% if invoice.pdf_url %}
+                            <a class="text-primary hover:underline flex items-center justify-end gap-1" href="{{ invoice.pdf_url }}" target="_blank">
+                                <span class="material-symbols-outlined text-sm">download</span>
+                                Download
+                            </a>
+                            {% else %}
+                            <span class="text-neutral-600">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-[#111111] border border-[#2a2a2a] p-12 text-center">
+        <span class="material-symbols-outlined text-6xl text-neutral-700 mb-4">receipt_long</span>
+        <h2 class="text-xl font-semibold mb-2">No Invoices Yet</h2>
+        <p class="text-neutral-500 mb-6">Your billing history will appear here once you subscribe to a plan.</p>
+        <a href="{{ url_for('subscription.index') }}" class="inline-block bg-primary text-on-primary px-6 py-2 font-bold rounded hover:brightness-110 transition-all">View Plans</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
