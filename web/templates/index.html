@@ -1,73 +1,909 @@
 {% extends "base.html" %}
 
-{% block title %}BharatQuant | High-Precision Quantitative Data{% endblock %}
+{% block title %}BharatQuant | Professional Stock Screener for Indian Markets{% endblock %}
+
+{% block extra_head %}
+<style>
+    html { scroll-behavior: smooth; }
+    .hero-grid {
+        background-image:
+            linear-gradient(rgba(98,223,125,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(98,223,125,0.04) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
+    .glow-primary { box-shadow: 0 0 40px rgba(98,223,125,0.08); }
+    .badge-green { background: rgba(98,223,125,0.08); border: 1px solid rgba(98,223,125,0.2); color: #62df7d; }
+    .badge-red   { background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.2); color: #ff6464; }
+    .badge-neutral { background: rgba(189,202,186,0.08); border: 1px solid rgba(189,202,186,0.15); color: #bdcaba; }
+    .metric-chip {
+        background: #1b211a;
+        border: 1px solid #3e4a3d;
+        color: #bdcaba;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 2px;
+        white-space: nowrap;
+    }
+    .table-row:hover { background: #1b211a; }
+    .feature-card { border: 1px solid #3e4a3d; background: #171d16; transition: border-color 0.2s; }
+    .feature-card:hover { border-color: rgba(98,223,125,0.35); }
+    .step-line::after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(90deg, #3e4a3d, transparent);
+    }
+    .nav-link { transition: color 0.15s; }
+    .nav-link:hover { color: #62df7d; }
+    .nav-link.active { color: #62df7d; border-bottom: 1px solid #62df7d; padding-bottom: 2px; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fadeup { animation: fadeUp 0.6s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .ticker-up { color: #62df7d; }
+    .ticker-down { color: #ff6464; }
+    .faq-item details summary { cursor: pointer; list-style: none; }
+    .faq-item details summary::-webkit-details-marker { display: none; }
+    .faq-item details[open] summary .faq-icon { transform: rotate(45deg); }
+    .faq-icon { transition: transform 0.2s; display: inline-block; }
+    .section-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: #62df7d; text-transform: uppercase; margin-bottom: 12px; }
+</style>
+{% endblock %}
 
 {% block content %}
-<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-14 bg-neutral-950 border-b border-neutral-800">
-    <div class="flex items-center gap-2">
-        <span class="material-symbols-outlined text-green-600" style="font-variation-settings: 'FILL' 1;">candlestick_chart</span>
-        <span class="text-xl font-black tracking-tighter text-green-600">BharatQuant</span>
-    </div>
+
+<!-- ═══════════════════════════════════════════════════════
+     NAVIGATION
+══════════════════════════════════════════════════════════ -->
+<header id="top" class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-14 bg-[#09100a]/90 border-b border-[#3e4a3d] backdrop-blur-sm">
+    <a href="#top" class="flex items-center gap-2 group">
+        <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1; font-size:22px;">candlestick_chart</span>
+        <span class="text-lg font-black tracking-tight text-primary font-['Inter']">BharatQuant</span>
+    </a>
     <nav class="hidden md:flex items-center gap-8">
-        <a class="text-green-500 border-b-2 border-green-600 pb-1 text-sm transition-all" href="#">Markets</a>
-        <a class="text-neutral-400 font-medium hover:text-green-500 transition-all text-sm" href="#">Screener</a>
-        <a class="text-neutral-400 font-medium hover:text-green-500 transition-all text-sm" href="#">Strategies</a>
-        <a class="text-neutral-400 font-medium hover:text-green-500 transition-all text-sm" href="#">Pricing</a>
+        <a href="#features"  class="nav-link text-[#bdcaba] text-sm">Features</a>
+        <a href="#screener"  class="nav-link text-[#bdcaba] text-sm">Screener</a>
+        <a href="#metrics"   class="nav-link text-[#bdcaba] text-sm">Metrics</a>
+        <a href="#pricing"   class="nav-link text-[#bdcaba] text-sm">Pricing</a>
+        <a href="#faq"       class="nav-link text-[#bdcaba] text-sm">FAQ</a>
     </nav>
-    <div class="flex items-center gap-4">
-        <a href="{{ url_for('auth.login') }}" class="text-neutral-400 font-medium hover:text-neutral-200 transition-colors text-sm">Login</a>
-        <a href="{{ url_for('auth.signup') }}" class="bg-primary-container text-on-primary-container px-4 py-1.5 font-bold text-sm rounded">Get Started</a>
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('auth.login') }}" class="text-[#bdcaba] hover:text-[#dde5d9] transition-colors text-sm font-medium">Login</a>
+        <a href="{{ url_for('auth.signup') }}" class="bg-primary text-on-primary px-4 py-1.5 text-sm font-bold rounded hover:brightness-110 transition-all">Get Started Free</a>
     </div>
 </header>
 
+
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════ -->
 <main class="pt-14">
-    <section class="relative overflow-hidden pt-20 pb-32 px-6">
-        <div class="max-w-6xl mx-auto flex flex-col items-center text-center">
-            <div class="inline-flex items-center gap-2 bg-surface-container-high px-3 py-1 rounded-full border border-outline-variant mb-8">
-                <span class="text-primary text-[10px] font-['JetBrains Mono'] uppercase tracking-widest">Live Now</span>
-                <span class="text-on-surface-variant text-xs">Full NSE & BSE Fundamental Analysis Terminal</span>
+<section class="relative hero-grid overflow-hidden pt-24 pb-20 px-6">
+    <!-- Radial gradient bloom -->
+    <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(98,223,125,0.07), transparent);"></div>
+
+    <div class="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
+
+        <!-- Live badge -->
+        <div class="inline-flex items-center gap-2 badge-green px-3 py-1 rounded-full mb-8 text-xs font-['JetBrains_Mono'] font-semibold animate-fadeup" style="opacity:0;">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            NSE &amp; BSE · 5,000+ Stocks · Live Data
+        </div>
+
+        <h1 class="text-4xl md:text-6xl font-black text-[#dde5d9] mb-6 max-w-4xl leading-tight tracking-tight animate-fadeup delay-1" style="opacity:0;">
+            The Professional<br class="hidden md:block"/>
+            <span class="text-primary">Quantitative Screener</span><br class="hidden md:block"/>
+            for Indian Markets
+        </h1>
+
+        <p class="text-[#bdcaba] text-lg max-w-2xl mb-10 leading-relaxed animate-fadeup delay-2" style="opacity:0;">
+            Deep fundamental analysis, Piotroski F-Scores, relative strength signals, and 5-year historical data for every listed company — exported into professional colour-coded Excel reports in minutes.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center gap-4 mb-16 animate-fadeup delay-3" style="opacity:0;">
+            <a href="{{ url_for('auth.signup') }}" class="bg-primary text-on-primary px-8 py-3.5 font-bold rounded hover:brightness-110 transition-all w-full sm:w-auto text-sm">
+                Start Screening Free
+            </a>
+            <a href="#screener" class="flex items-center gap-2 border border-[#3e4a3d] text-[#dde5d9] px-8 py-3.5 font-bold rounded hover:bg-[#1b211a] transition-all w-full sm:w-auto text-sm justify-center">
+                <span class="material-symbols-outlined text-lg">table_chart</span>
+                See Live Preview
+            </a>
+        </div>
+
+        <!-- Credibility row -->
+        <div class="flex flex-wrap justify-center items-center gap-6 text-xs text-[#879485] font-['JetBrains_Mono'] animate-fadeup" style="opacity:0; animation-delay:0.4s;">
+            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-primary text-sm">verified</span> Piotroski F-Score</span>
+            <span class="w-px h-3 bg-[#3e4a3d]"></span>
+            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-primary text-sm">trending_up</span> RS vs Nifty 50</span>
+            <span class="w-px h-3 bg-[#3e4a3d]"></span>
+            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-primary text-sm">download</span> Excel Export</span>
+            <span class="w-px h-3 bg-[#3e4a3d]"></span>
+            <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-primary text-sm">schedule</span> 5-Year History</span>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     STATS BAR
+══════════════════════════════════════════════════════════ -->
+<section class="border-y border-[#3e4a3d] bg-[#171d16] py-8">
+    <div class="max-w-6xl mx-auto px-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div>
+                <div class="font-['JetBrains_Mono'] text-primary text-3xl font-bold mb-1">5,000+</div>
+                <div class="font-['JetBrains_Mono'] text-[#879485] text-xs uppercase tracking-widest">Stocks Tracked</div>
             </div>
-            <h1 class="text-5xl font-bold text-on-surface mb-6 max-w-4xl">
-                Screen Every Indian Stock. <br class="hidden md:block"/> <span class="text-primary">In Minutes.</span>
-            </h1>
-            <p class="text-on-surface-variant text-lg max-w-2xl mb-10">
-                High-precision quantitative data for 5,000+ listed companies. Export deep fundamentals, technical signals, and history directly into professional Excel reports.
-            </p>
-            <div class="flex flex-col md:flex-row items-center gap-4 mb-20">
-                <a href="{{ url_for('auth.signup') }}" class="bg-primary px-8 py-4 text-on-primary font-bold rounded-lg hover:brightness-110 transition-all w-full md:w-auto">Get Started Free</a>
-                <button class="border border-outline px-8 py-4 text-on-surface font-bold rounded-lg hover:bg-surface-container transition-all w-full md:w-auto flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined">play_circle</span>
-                    See How It Works
-                </button>
+            <div>
+                <div class="font-['JetBrains_Mono'] text-primary text-3xl font-bold mb-1">29+</div>
+                <div class="font-['JetBrains_Mono'] text-[#879485] text-xs uppercase tracking-widest">Core Metrics</div>
+            </div>
+            <div>
+                <div class="font-['JetBrains_Mono'] text-primary text-3xl font-bold mb-1">5 YR</div>
+                <div class="font-['JetBrains_Mono'] text-[#879485] text-xs uppercase tracking-widest">Historical Data</div>
+            </div>
+            <div>
+                <div class="font-['JetBrains_Mono'] text-primary text-3xl font-bold mb-1">NSE+BSE</div>
+                <div class="font-['JetBrains_Mono'] text-[#879485] text-xs uppercase tracking-widest">Full Coverage</div>
             </div>
         </div>
-    </section>
-    
-    <section class="bg-surface-container-low border-y border-outline-variant py-12">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-                <div class="flex flex-col gap-2">
-                    <span class="font-['JetBrains Mono'] text-primary text-4xl font-semibold">5,000+</span>
-                    <span class="font-['JetBrains Mono'] text-on-surface-variant uppercase text-xs">Stocks Tracked</span>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURES
+══════════════════════════════════════════════════════════ -->
+<section id="features" class="py-24 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16">
+            <div class="section-label">CORE CAPABILITIES</div>
+            <h2 class="text-3xl font-bold text-[#dde5d9] mb-4 tracking-tight">Everything a Quant Needs</h2>
+            <p class="text-[#bdcaba] max-w-xl mx-auto text-sm leading-relaxed">From penny-stock filtering to institutional-grade scoring — BharatQuant gives you the full quantitative toolkit in one place.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+            <!-- Card 1: Fundamental Analysis -->
+            <div class="feature-card rounded p-6">
+                <div class="w-9 h-9 flex items-center justify-center bg-primary/10 border border-primary/20 rounded mb-4">
+                    <span class="material-symbols-outlined text-primary text-lg">analytics</span>
                 </div>
-                <div class="flex flex-col gap-2">
-                    <span class="font-['JetBrains Mono'] text-primary text-4xl font-semibold">29+</span>
-                    <span class="font-['JetBrains Mono'] text-on-surface-variant uppercase text-xs">Core Metrics</span>
-                </div>
-                <div class="flex flex-col gap-2">
-                    <span class="font-['JetBrains Mono'] text-primary text-4xl font-semibold">5 YEARS</span>
-                    <span class="font-['JetBrains Mono'] text-on-surface-variant uppercase text-xs">Historical Data</span>
+                <h3 class="text-[#dde5d9] font-semibold mb-2 text-sm">Deep Fundamental Analysis</h3>
+                <p class="text-[#879485] text-xs leading-relaxed mb-4">Access P/E, P/B, ROE (1y &amp; 3y), ROCE, D/E ratio, Operating Margins, and YoY Sales &amp; Profit Growth for every NSE and BSE stock.</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="metric-chip">P/E</span>
+                    <span class="metric-chip">P/B</span>
+                    <span class="metric-chip">ROE</span>
+                    <span class="metric-chip">ROCE</span>
+                    <span class="metric-chip">D/E</span>
+                    <span class="metric-chip">OPM %</span>
                 </div>
             </div>
+
+            <!-- Card 2: F-Score -->
+            <div class="feature-card rounded p-6">
+                <div class="w-9 h-9 flex items-center justify-center bg-primary/10 border border-primary/20 rounded mb-4">
+                    <span class="material-symbols-outlined text-primary text-lg">verified</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2 text-sm">Piotroski F-Score</h3>
+                <p class="text-[#879485] text-xs leading-relaxed mb-4">Automatically computed 0–9 financial health score across profitability, leverage, and operating efficiency. Scores ≥7 flag institutional-quality companies.</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="metric-chip">0–9 Scale</span>
+                    <span class="metric-chip">Profitability</span>
+                    <span class="metric-chip">Leverage</span>
+                    <span class="metric-chip">Efficiency</span>
+                </div>
+            </div>
+
+            <!-- Card 3: Relative Strength -->
+            <div class="feature-card rounded p-6">
+                <div class="w-9 h-9 flex items-center justify-center bg-primary/10 border border-primary/20 rounded mb-4">
+                    <span class="material-symbols-outlined text-primary text-lg">trending_up</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2 text-sm">Relative Strength vs Nifty 50</h3>
+                <p class="text-[#879485] text-xs leading-relaxed mb-4">RS Score compares each stock's momentum against Nifty 50. Positive scores identify market leaders. Negative scores warn of laggards — before they get worse.</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="metric-chip">RS Score</span>
+                    <span class="metric-chip">1y Rt %</span>
+                    <span class="metric-chip">3y Rt %</span>
+                    <span class="metric-chip">5y Rt %</span>
+                </div>
+            </div>
+
+            <!-- Card 4: Technical Signals -->
+            <div class="feature-card rounded p-6">
+                <div class="w-9 h-9 flex items-center justify-center bg-primary/10 border border-primary/20 rounded mb-4">
+                    <span class="material-symbols-outlined text-primary text-lg">candlestick_chart</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2 text-sm">Technical Signals</h3>
+                <p class="text-[#879485] text-xs leading-relaxed mb-4">RSI, 50-DMA, 200-DMA, trend classification, and volatility — all computed from official Bhavcopy prices to ensure accuracy at every market session.</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="metric-chip">RSI</span>
+                    <span class="metric-chip">50 DMA</span>
+                    <span class="metric-chip">200 DMA</span>
+                    <span class="metric-chip">Trend</span>
+                    <span class="metric-chip">Volatility</span>
+                </div>
+            </div>
+
+            <!-- Card 5: Ownership -->
+            <div class="feature-card rounded p-6">
+                <div class="w-9 h-9 flex items-center justify-center bg-primary/10 border border-primary/20 rounded mb-4">
+                    <span class="material-symbols-outlined text-primary text-lg">groups</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2 text-sm">Ownership &amp; Governance</h3>
+                <p class="text-[#879485] text-xs leading-relaxed mb-4">Monitor promoter holding, FII interest, pledging percentage, and public float. Spot red flags before the market does.</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="metric-chip">Promoter %</span>
+                    <span class="metric-chip">FII %</span>
+                    <span class="metric-chip">Public %</span>
+                    <span class="metric-chip">Pledged %</span>
+                </div>
+            </div>
+
+            <!-- Card 6: Excel Export -->
+            <div class="feature-card rounded p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-20 h-20 opacity-5 pointer-events-none">
+                    <span class="material-symbols-outlined text-[80px] text-primary" style="font-variation-settings:'FILL' 1;">download</span>
+                </div>
+                <div class="w-9 h-9 flex items-center justify-center bg-primary/10 border border-primary/20 rounded mb-4">
+                    <span class="material-symbols-outlined text-primary text-lg">table_chart</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2 text-sm">Colour-Coded Excel Reports</h3>
+                <p class="text-[#879485] text-xs leading-relaxed mb-4">Export every screener result into a professionally formatted Excel workbook — green rows for strong metrics, red for risk flags — ready to share with your team.</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span class="metric-chip">XLSX</span>
+                    <span class="metric-chip">Colour Rules</span>
+                    <span class="metric-chip">All 29 Cols</span>
+                    <span class="metric-chip">Pro Plan</span>
+                </div>
+            </div>
+
         </div>
-    </section>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SCREENER LIVE PREVIEW
+══════════════════════════════════════════════════════════ -->
+<section id="screener" class="py-20 px-6 bg-[#171d16] border-y border-[#3e4a3d]">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-12">
+            <div class="section-label">TERMINAL PREVIEW</div>
+            <h2 class="text-3xl font-bold text-[#dde5d9] mb-4 tracking-tight">The Screener in Action</h2>
+            <p class="text-[#bdcaba] max-w-xl mx-auto text-sm leading-relaxed">Scan every NSE and BSE stock. Sort by F-Score, RS Score, or any of 29 metrics. Identify your next position in seconds.</p>
+        </div>
+
+        <!-- Terminal window chrome -->
+        <div class="border border-[#3e4a3d] rounded overflow-hidden glow-primary">
+            <!-- Window title bar -->
+            <div class="bg-[#1b211a] border-b border-[#3e4a3d] px-4 py-2.5 flex items-center gap-3">
+                <div class="flex gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#3e4a3d]"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#3e4a3d]"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#3e4a3d]"></span>
+                </div>
+                <span class="font-['JetBrains_Mono'] text-[#879485] text-xs ml-2">BharatQuant Terminal — Screener Output · NSE+BSE · Sorted: F-Score ↓</span>
+                <div class="ml-auto flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    <span class="font-['JetBrains_Mono'] text-primary text-[10px]">LIVE</span>
+                </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="bg-[#131a12] border-b border-[#3e4a3d] px-4 py-2 flex flex-wrap items-center gap-2 text-[10px] font-['JetBrains_Mono']">
+                <span class="text-[#879485]">FILTERS:</span>
+                <span class="badge-green px-2 py-0.5 rounded text-[10px]">MCap &gt; 500 Cr</span>
+                <span class="badge-green px-2 py-0.5 rounded text-[10px]">F-Score ≥ 7</span>
+                <span class="badge-green px-2 py-0.5 rounded text-[10px]">RS Score &gt; 0</span>
+                <span class="badge-green px-2 py-0.5 rounded text-[10px]">D/E &lt; 1</span>
+                <span class="text-[#879485] ml-auto">6 results</span>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-[11px] font-['JetBrains_Mono']">
+                    <thead>
+                        <tr class="bg-[#131a12] border-b-2 border-[#3e4a3d] text-[#879485] text-[10px] uppercase tracking-wider">
+                            <th class="px-4 py-2.5 text-left font-semibold">Ticker</th>
+                            <th class="px-4 py-2.5 text-left font-semibold">Name</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">Price</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">MCap (Cr)</th>
+                            <th class="px-4 py-2.5 text-center font-semibold text-primary">F-Score</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">RS Score</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">P/E</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">ROE 1y %</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">Sales Gro %</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">D/E</th>
+                            <th class="px-4 py-2.5 text-center font-semibold">Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Row 1 -->
+                        <tr class="table-row border-b border-[#3e4a3d]/50 text-[#dde5d9]">
+                            <td class="px-4 py-2.5 font-bold text-primary">TCS.NS</td>
+                            <td class="px-4 py-2.5 text-[#bdcaba]">Tata Consultancy</td>
+                            <td class="px-4 py-2.5 text-right">₹3,456</td>
+                            <td class="px-4 py-2.5 text-right">12,54,320</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px] font-bold">8</span></td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+8.4</td>
+                            <td class="px-4 py-2.5 text-right">28.4</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">44.2</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+14.5</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">0.04</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px]">UP</span></td>
+                        </tr>
+                        <!-- Row 2 -->
+                        <tr class="table-row border-b border-[#3e4a3d]/50 text-[#dde5d9]">
+                            <td class="px-4 py-2.5 font-bold text-primary">BAJFINANCE.NS</td>
+                            <td class="px-4 py-2.5 text-[#bdcaba]">Bajaj Finance</td>
+                            <td class="px-4 py-2.5 text-right">₹7,234</td>
+                            <td class="px-4 py-2.5 text-right">4,35,100</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px] font-bold">8</span></td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+14.2</td>
+                            <td class="px-4 py-2.5 text-right">31.2</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">23.8</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+28.4</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">0.72</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px]">UP</span></td>
+                        </tr>
+                        <!-- Row 3 -->
+                        <tr class="table-row border-b border-[#3e4a3d]/50 text-[#dde5d9]">
+                            <td class="px-4 py-2.5 font-bold text-primary">RELIANCE.NS</td>
+                            <td class="px-4 py-2.5 text-[#bdcaba]">Reliance Industries</td>
+                            <td class="px-4 py-2.5 text-right">₹2,891</td>
+                            <td class="px-4 py-2.5 text-right">1,95,400</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px] font-bold">7</span></td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+5.7</td>
+                            <td class="px-4 py-2.5 text-right">24.1</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">16.8</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+18.2</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">0.38</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px]">UP</span></td>
+                        </tr>
+                        <!-- Row 4 -->
+                        <tr class="table-row border-b border-[#3e4a3d]/50 text-[#dde5d9]">
+                            <td class="px-4 py-2.5 font-bold text-primary">INFY.NS</td>
+                            <td class="px-4 py-2.5 text-[#bdcaba]">Infosys Ltd</td>
+                            <td class="px-4 py-2.5 text-right">₹1,498</td>
+                            <td class="px-4 py-2.5 text-right">6,21,000</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px] font-bold">7</span></td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+3.2</td>
+                            <td class="px-4 py-2.5 text-right">23.6</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">31.7</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+11.3</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">0.12</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px]">UP</span></td>
+                        </tr>
+                        <!-- Row 5 -->
+                        <tr class="table-row border-b border-[#3e4a3d]/50 text-[#dde5d9]">
+                            <td class="px-4 py-2.5 font-bold text-primary">SUNPHARMA.NS</td>
+                            <td class="px-4 py-2.5 text-[#bdcaba]">Sun Pharma</td>
+                            <td class="px-4 py-2.5 text-right">₹1,674</td>
+                            <td class="px-4 py-2.5 text-right">4,01,200</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px] font-bold">7</span></td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+9.1</td>
+                            <td class="px-4 py-2.5 text-right">33.8</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">19.4</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+22.7</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">0.21</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-green px-2 py-0.5 rounded text-[10px]">UP</span></td>
+                        </tr>
+                        <!-- Row 6 -->
+                        <tr class="table-row text-[#dde5d9]">
+                            <td class="px-4 py-2.5 font-bold text-primary">HDFCBANK.NS</td>
+                            <td class="px-4 py-2.5 text-[#bdcaba]">HDFC Bank</td>
+                            <td class="px-4 py-2.5 text-right">₹1,654</td>
+                            <td class="px-4 py-2.5 text-right">12,30,800</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-neutral px-2 py-0.5 rounded text-[10px] font-bold">6</span></td>
+                            <td class="px-4 py-2.5 text-right ticker-down">−2.1</td>
+                            <td class="px-4 py-2.5 text-right">17.9</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">15.4</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">+22.1</td>
+                            <td class="px-4 py-2.5 text-right ticker-up">0.87</td>
+                            <td class="px-4 py-2.5 text-center"><span class="badge-neutral px-2 py-0.5 rounded text-[10px]">SIDE</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer bar -->
+            <div class="bg-[#131a12] border-t border-[#3e4a3d] px-4 py-2 flex items-center justify-between">
+                <span class="font-['JetBrains_Mono'] text-[#879485] text-[10px]">Showing 6 of 5,000+ results · Data from NSE Bhavcopy</span>
+                <a href="{{ url_for('auth.signup') }}" class="font-['JetBrains_Mono'] text-primary text-[10px] hover:underline flex items-center gap-1">
+                    Unlock Full Screener <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     METRICS SHOWCASE
+══════════════════════════════════════════════════════════ -->
+<section id="metrics" class="py-24 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16">
+            <div class="section-label">29+ DATA POINTS</div>
+            <h2 class="text-3xl font-bold text-[#dde5d9] mb-4 tracking-tight">Every Metric That Matters</h2>
+            <p class="text-[#bdcaba] max-w-xl mx-auto text-sm leading-relaxed">BharatQuant computes and curates 29+ quantitative metrics across five analytical dimensions for each screened stock.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <!-- Valuation -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                    <span class="font-['JetBrains_Mono'] text-primary text-xs uppercase tracking-wider font-bold">Valuation</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="metric-chip">P/E Ratio</span>
+                    <span class="metric-chip">P/B Ratio</span>
+                    <span class="metric-chip">MCap (Cr)</span>
+                    <span class="metric-chip">Price</span>
+                </div>
+                <p class="text-[#879485] text-xs mt-3 leading-relaxed">Identify undervalued opportunities relative to earnings, book value, and market capitalisation.</p>
+            </div>
+
+            <!-- Profitability -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                    <span class="font-['JetBrains_Mono'] text-primary text-xs uppercase tracking-wider font-bold">Profitability</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="metric-chip">ROE 1y %</span>
+                    <span class="metric-chip">ROE 3y %</span>
+                    <span class="metric-chip">ROCE %</span>
+                    <span class="metric-chip">OPM %</span>
+                </div>
+                <p class="text-[#879485] text-xs mt-3 leading-relaxed">Measure how efficiently a company converts capital into profit across one and three year windows.</p>
+            </div>
+
+            <!-- Growth -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                    <span class="font-['JetBrains_Mono'] text-primary text-xs uppercase tracking-wider font-bold">Growth</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="metric-chip">Sales Growth YoY</span>
+                    <span class="metric-chip">Profit Growth YoY</span>
+                    <span class="metric-chip">1y Rt %</span>
+                    <span class="metric-chip">3y Rt %</span>
+                    <span class="metric-chip">5y Rt %</span>
+                </div>
+                <p class="text-[#879485] text-xs mt-3 leading-relaxed">Compare QoQ revenue and profit trajectory to benchmark expansion across multiple horizons.</p>
+            </div>
+
+            <!-- Health & Risk -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                    <span class="font-['JetBrains_Mono'] text-primary text-xs uppercase tracking-wider font-bold">Health &amp; Risk</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="metric-chip">F-Score (0–9)</span>
+                    <span class="metric-chip">D/E Ratio</span>
+                    <span class="metric-chip">Pledged %</span>
+                </div>
+                <p class="text-[#879485] text-xs mt-3 leading-relaxed">Piotroski composite score plus debt leverage and promoter pledging to flag financial distress early.</p>
+            </div>
+
+            <!-- Technical -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                    <span class="font-['JetBrains_Mono'] text-primary text-xs uppercase tracking-wider font-bold">Technical</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="metric-chip">RS Score</span>
+                    <span class="metric-chip">RSI</span>
+                    <span class="metric-chip">50 DMA</span>
+                    <span class="metric-chip">200 DMA</span>
+                    <span class="metric-chip">Trend</span>
+                    <span class="metric-chip">Volatility</span>
+                </div>
+                <p class="text-[#879485] text-xs mt-3 leading-relaxed">Momentum and trend metrics computed from official Bhavcopy prices — no vendor data contamination.</p>
+            </div>
+
+            <!-- Ownership -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                    <span class="font-['JetBrains_Mono'] text-primary text-xs uppercase tracking-wider font-bold">Ownership</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span class="metric-chip">Promoter %</span>
+                    <span class="metric-chip">FII %</span>
+                    <span class="metric-chip">Public %</span>
+                    <span class="metric-chip">Sector</span>
+                    <span class="metric-chip">Industry</span>
+                </div>
+                <p class="text-[#879485] text-xs mt-3 leading-relaxed">Institutional and promoter ownership patterns reveal conviction and potential selling pressure risks.</p>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     HOW IT WORKS
+══════════════════════════════════════════════════════════ -->
+<section class="py-20 px-6 bg-[#171d16] border-y border-[#3e4a3d]">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-16">
+            <div class="section-label">WORKFLOW</div>
+            <h2 class="text-3xl font-bold text-[#dde5d9] mb-4 tracking-tight">From Universe to Insight — in Three Steps</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-0 relative">
+            <!-- connector line (desktop) -->
+            <div class="hidden md:block absolute top-7 left-[16.67%] right-[16.67%] h-px bg-[#3e4a3d]"></div>
+
+            <!-- Step 1 -->
+            <div class="flex flex-col items-center text-center px-8 pb-12 md:pb-0 relative">
+                <div class="w-14 h-14 flex items-center justify-center bg-[#1b211a] border border-[#62df7d]/40 rounded-full mb-6 relative z-10">
+                    <span class="font-['JetBrains_Mono'] text-primary text-xl font-bold">01</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2">Define Your Universe</h3>
+                <p class="text-[#879485] text-xs leading-relaxed">Set market cap floors (e.g. &gt;500 Cr), choose NSE, BSE, or both, and apply the Penny Stock Shield to remove illiquid noise automatically.</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="flex flex-col items-center text-center px-8 pb-12 md:pb-0 relative">
+                <div class="w-14 h-14 flex items-center justify-center bg-[#1b211a] border border-[#62df7d]/40 rounded-full mb-6 relative z-10">
+                    <span class="font-['JetBrains_Mono'] text-primary text-xl font-bold">02</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2">Apply Quantitative Filters</h3>
+                <p class="text-[#879485] text-xs leading-relaxed">Rank and filter by F-Score, RS Score, ROE, D/E, growth rates, and technical indicators. Surface only the highest-conviction candidates.</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="flex flex-col items-center text-center px-8 relative">
+                <div class="w-14 h-14 flex items-center justify-center bg-[#1b211a] border border-[#62df7d]/40 rounded-full mb-6 relative z-10">
+                    <span class="font-['JetBrains_Mono'] text-primary text-xl font-bold">03</span>
+                </div>
+                <h3 class="text-[#dde5d9] font-semibold mb-2">Export &amp; Act</h3>
+                <p class="text-[#879485] text-xs leading-relaxed">Download a colour-coded Excel report with all 29 metrics, ready for deep-dive research, portfolio construction, or sharing with your team.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PRICING
+══════════════════════════════════════════════════════════ -->
+<section id="pricing" class="py-24 px-6">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-16">
+            <div class="section-label">PRICING</div>
+            <h2 class="text-3xl font-bold text-[#dde5d9] mb-4 tracking-tight">Simple, Transparent Pricing</h2>
+            <p class="text-[#bdcaba] max-w-lg mx-auto text-sm leading-relaxed">Start free. Upgrade when you need unlimited screening power and Excel exports.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+
+            <!-- Starter -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-8 flex flex-col">
+                <span class="font-['JetBrains_Mono'] text-[#879485] text-xs uppercase tracking-wider mb-4">Starter</span>
+                <div class="flex items-baseline gap-1 mb-1">
+                    <span class="font-['JetBrains_Mono'] text-[#dde5d9] text-4xl font-bold">₹0</span>
+                    <span class="text-[#879485] text-sm">/month</span>
+                </div>
+                <p class="text-[#879485] text-xs mb-6">Free forever. Get a taste of the terminal.</p>
+                <ul class="space-y-3 mb-8 flex-grow text-xs">
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        100 stocks per search
+                    </li>
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Basic fundamentals (P/E, P/B, MCap)
+                    </li>
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        NSE + BSE coverage
+                    </li>
+                    <li class="flex items-start gap-2 text-[#3e4a3d]">
+                        <span class="material-symbols-outlined text-[#3e4a3d] text-sm mt-0.5">cancel</span>
+                        Excel export
+                    </li>
+                    <li class="flex items-start gap-2 text-[#3e4a3d]">
+                        <span class="material-symbols-outlined text-[#3e4a3d] text-sm mt-0.5">cancel</span>
+                        Piotroski F-Score
+                    </li>
+                    <li class="flex items-start gap-2 text-[#3e4a3d]">
+                        <span class="material-symbols-outlined text-[#3e4a3d] text-sm mt-0.5">cancel</span>
+                        5-Year historical data
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.signup') }}" class="w-full py-2.5 border border-[#3e4a3d] text-[#dde5d9] text-xs font-bold uppercase tracking-wider text-center rounded hover:bg-[#1b211a] transition-all block">Get Started Free</a>
+            </div>
+
+            <!-- Pro Terminal (featured) -->
+            <div class="border-2 border-primary bg-[#171d16] rounded p-8 flex flex-col relative shadow-lg" style="box-shadow: 0 0 30px rgba(98,223,125,0.06);">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-3 py-0.5 text-[10px] font-bold uppercase rounded-full whitespace-nowrap">Most Popular</div>
+                <span class="font-['JetBrains_Mono'] text-primary text-xs uppercase tracking-wider mb-4">Pro Terminal</span>
+                <div class="flex items-baseline gap-1 mb-1">
+                    <span class="font-['JetBrains_Mono'] text-[#dde5d9] text-4xl font-bold">₹999</span>
+                    <span class="text-[#879485] text-sm">/month</span>
+                </div>
+                <p class="text-[#879485] text-xs mb-6">Full access for individual quants and investors.</p>
+                <ul class="space-y-3 mb-8 flex-grow text-xs">
+                    <li class="flex items-start gap-2 text-[#dde5d9]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Unlimited stock screening
+                    </li>
+                    <li class="flex items-start gap-2 text-[#dde5d9]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        All 29+ quantitative metrics
+                    </li>
+                    <li class="flex items-start gap-2 text-[#dde5d9]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Unlimited Excel exports
+                    </li>
+                    <li class="flex items-start gap-2 text-[#dde5d9]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Piotroski F-Score + RS Score
+                    </li>
+                    <li class="flex items-start gap-2 text-[#dde5d9]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        5-Year historical data
+                    </li>
+                    <li class="flex items-start gap-2 text-[#dde5d9]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Colour-coded Excel reports
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.signup') }}" class="w-full py-2.5 bg-primary text-on-primary text-xs font-bold uppercase tracking-wider text-center rounded hover:brightness-110 transition-all block">Upgrade to Pro</a>
+            </div>
+
+            <!-- Team -->
+            <div class="border border-[#3e4a3d] bg-[#171d16] rounded p-8 flex flex-col">
+                <span class="font-['JetBrains_Mono'] text-[#879485] text-xs uppercase tracking-wider mb-4">Team</span>
+                <div class="flex items-baseline gap-1 mb-1">
+                    <span class="font-['JetBrains_Mono'] text-[#dde5d9] text-4xl font-bold">₹2,999</span>
+                    <span class="text-[#879485] text-sm">/month</span>
+                </div>
+                <p class="text-[#879485] text-xs mb-6">Built for PMS, research desks, and investment teams.</p>
+                <ul class="space-y-3 mb-8 flex-grow text-xs">
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        5 user licences
+                    </li>
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Everything in Pro Terminal
+                    </li>
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        API access (Beta)
+                    </li>
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Custom report templates
+                    </li>
+                    <li class="flex items-start gap-2 text-[#bdcaba]">
+                        <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                        Priority support
+                    </li>
+                </ul>
+                <a href="{{ url_for('auth.signup') }}" class="w-full py-2.5 border border-[#3e4a3d] text-[#dde5d9] text-xs font-bold uppercase tracking-wider text-center rounded hover:bg-[#1b211a] transition-all block">Contact Sales</a>
+            </div>
+
+        </div>
+
+        <!-- Disclaimer -->
+        <p class="text-center text-[#879485] text-xs mt-8">All plans include access to the web dashboard. Prices exclude GST. Cancel anytime.</p>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FAQ
+══════════════════════════════════════════════════════════ -->
+<section id="faq" class="py-20 px-6 bg-[#171d16] border-t border-[#3e4a3d]">
+    <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-12">
+            <div class="section-label">FAQ</div>
+            <h2 class="text-3xl font-bold text-[#dde5d9] mb-4 tracking-tight">Common Questions</h2>
+        </div>
+
+        <div class="space-y-2 faq-item">
+
+            <details class="border border-[#3e4a3d] rounded bg-[#1b211a] group">
+                <summary class="flex items-center justify-between px-5 py-4 text-sm text-[#dde5d9] font-medium cursor-pointer">
+                    Where does BharatQuant get its data?
+                    <span class="faq-icon material-symbols-outlined text-[#879485] text-lg ml-4 shrink-0">add</span>
+                </summary>
+                <div class="px-5 pb-4 text-[#879485] text-xs leading-relaxed border-t border-[#3e4a3d] pt-4">
+                    Prices are sourced directly from official NSE and BSE Bhavcopy files — the exchange's daily trade data. Fundamental and financial data is fetched from Yahoo Finance and processed through our proprietary pipeline, ensuring accurate F-Score and growth calculations.
+                </div>
+            </details>
+
+            <details class="border border-[#3e4a3d] rounded bg-[#1b211a] group">
+                <summary class="flex items-center justify-between px-5 py-4 text-sm text-[#dde5d9] font-medium cursor-pointer">
+                    What is the Piotroski F-Score?
+                    <span class="faq-icon material-symbols-outlined text-[#879485] text-lg ml-4 shrink-0">add</span>
+                </summary>
+                <div class="px-5 pb-4 text-[#879485] text-xs leading-relaxed border-t border-[#3e4a3d] pt-4">
+                    The Piotroski F-Score is a 0–9 composite financial health metric developed by Stanford professor Joseph Piotroski. It evaluates a company across nine criteria spanning profitability (e.g. positive ROA), leverage (e.g. lower long-term debt), and operating efficiency (e.g. improving asset turnover). A score of 7–9 identifies fundamentally strong companies often favoured by value investors and institutions.
+                </div>
+            </details>
+
+            <details class="border border-[#3e4a3d] rounded bg-[#1b211a] group">
+                <summary class="flex items-center justify-between px-5 py-4 text-sm text-[#dde5d9] font-medium cursor-pointer">
+                    How does the Excel export work?
+                    <span class="faq-icon material-symbols-outlined text-[#879485] text-lg ml-4 shrink-0">add</span>
+                </summary>
+                <div class="px-5 pb-4 text-[#879485] text-xs leading-relaxed border-t border-[#3e4a3d] pt-4">
+                    Pro Terminal subscribers can download screener results as a professionally formatted Excel workbook (.xlsx). Each row represents one stock with all 29 columns. Conditional formatting automatically highlights green rows for strong metrics (e.g. F-Score ≥7, ROE &gt;15%) and red for risk indicators (e.g. D/E &gt;2, negative growth), making it easy to scan hundreds of stocks at once.
+                </div>
+            </details>
+
+            <details class="border border-[#3e4a3d] rounded bg-[#1b211a] group">
+                <summary class="flex items-center justify-between px-5 py-4 text-sm text-[#dde5d9] font-medium cursor-pointer">
+                    What is the Penny Stock Shield?
+                    <span class="faq-icon material-symbols-outlined text-[#879485] text-lg ml-4 shrink-0">add</span>
+                </summary>
+                <div class="px-5 pb-4 text-[#879485] text-xs leading-relaxed border-t border-[#3e4a3d] pt-4">
+                    The Penny Stock Shield automatically filters out stocks trading below a configurable minimum price threshold. This removes manipulated, illiquid, or shell company listings from your screener results — leaving only legitimate, investable candidates. The threshold is set in configuration and applied before any fundamental analysis is run.
+                </div>
+            </details>
+
+            <details class="border border-[#3e4a3d] rounded bg-[#1b211a] group">
+                <summary class="flex items-center justify-between px-5 py-4 text-sm text-[#dde5d9] font-medium cursor-pointer">
+                    Can I cancel my subscription at any time?
+                    <span class="faq-icon material-symbols-outlined text-[#879485] text-lg ml-4 shrink-0">add</span>
+                </summary>
+                <div class="px-5 pb-4 text-[#879485] text-xs leading-relaxed border-t border-[#3e4a3d] pt-4">
+                    Yes. You can cancel from the Subscription page in your dashboard at any time. You'll retain full access until the end of your current billing cycle — there are no refunds for partial months. Billing is handled securely via Stripe and we never store your payment details.
+                </div>
+            </details>
+
+            <details class="border border-[#3e4a3d] rounded bg-[#1b211a] group">
+                <summary class="flex items-center justify-between px-5 py-4 text-sm text-[#dde5d9] font-medium cursor-pointer">
+                    Is BharatQuant a SEBI-registered investment adviser?
+                    <span class="faq-icon material-symbols-outlined text-[#879485] text-lg ml-4 shrink-0">add</span>
+                </summary>
+                <div class="px-5 pb-4 text-[#879485] text-xs leading-relaxed border-t border-[#3e4a3d] pt-4">
+                    No. BharatQuant is a data and analytics platform, not a registered investment adviser. Nothing on this platform constitutes investment advice. All screening outputs are for research and informational purposes only. Always consult a qualified financial adviser before making investment decisions.
+                </div>
+            </details>
+
+        </div>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CTA BANNER
+══════════════════════════════════════════════════════════ -->
+<section class="py-20 px-6 border-t border-[#3e4a3d]">
+    <div class="max-w-3xl mx-auto text-center">
+        <div class="section-label">GET STARTED</div>
+        <h2 class="text-4xl font-black text-[#dde5d9] mb-4 tracking-tight">
+            Start Screening the<br/>
+            <span class="text-primary">Indian Market Today</span>
+        </h2>
+        <p class="text-[#bdcaba] text-sm mb-8 leading-relaxed max-w-lg mx-auto">
+            Free account. No credit card required. Access 5,000+ stocks across NSE and BSE with fundamental and technical data — in under two minutes.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="{{ url_for('auth.signup') }}" class="bg-primary text-on-primary px-10 py-3.5 font-bold rounded hover:brightness-110 transition-all w-full sm:w-auto text-sm">
+                Create Free Account
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="border border-[#3e4a3d] text-[#bdcaba] px-10 py-3.5 font-bold rounded hover:bg-[#1b211a] transition-all w-full sm:w-auto text-sm text-center">
+                Sign In
+            </a>
+        </div>
+        <p class="text-[#879485] text-xs mt-6">No spam. No investment advice. Pure data.</p>
+    </div>
+</section>
+
 </main>
 
-<footer class="w-full py-12 px-6 border-t border-neutral-900 bg-neutral-950">
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════════════ -->
+<footer class="border-t border-[#3e4a3d] bg-[#09100a] py-16 px-6">
     <div class="max-w-6xl mx-auto">
-        <div class="pt-8 border-t border-neutral-900 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-            <p class="text-neutral-500 text-xs uppercase tracking-widest">© 2024 BharatQuant. All Rights Reserved.</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+
+            <!-- Brand -->
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1; font-size:20px;">candlestick_chart</span>
+                    <span class="text-base font-black tracking-tight text-primary">BharatQuant</span>
+                </div>
+                <p class="text-[#879485] text-xs leading-relaxed mb-4">High-precision quantitative data for Indian equity markets. Built for investors who think in numbers.</p>
+                <span class="font-['JetBrains_Mono'] text-[#3e4a3d] text-[10px] uppercase tracking-widest">NSE · BSE · 5,000+ Stocks</span>
+            </div>
+
+            <!-- Product -->
+            <div>
+                <div class="font-['JetBrains_Mono'] text-[#879485] text-[10px] uppercase tracking-widest mb-4">Product</div>
+                <ul class="space-y-2.5 text-xs text-[#bdcaba]">
+                    <li><a href="#features" class="hover:text-primary transition-colors">Features</a></li>
+                    <li><a href="#screener" class="hover:text-primary transition-colors">Screener Preview</a></li>
+                    <li><a href="#metrics" class="hover:text-primary transition-colors">Metrics</a></li>
+                    <li><a href="#pricing" class="hover:text-primary transition-colors">Pricing</a></li>
+                </ul>
+            </div>
+
+            <!-- Account -->
+            <div>
+                <div class="font-['JetBrains_Mono'] text-[#879485] text-[10px] uppercase tracking-widest mb-4">Account</div>
+                <ul class="space-y-2.5 text-xs text-[#bdcaba]">
+                    <li><a href="{{ url_for('auth.signup') }}" class="hover:text-primary transition-colors">Sign Up Free</a></li>
+                    <li><a href="{{ url_for('auth.login') }}" class="hover:text-primary transition-colors">Login</a></li>
+                    <li><a href="#pricing" class="hover:text-primary transition-colors">Upgrade to Pro</a></li>
+                </ul>
+            </div>
+
+            <!-- Legal -->
+            <div>
+                <div class="font-['JetBrains_Mono'] text-[#879485] text-[10px] uppercase tracking-widest mb-4">Legal</div>
+                <ul class="space-y-2.5 text-xs text-[#bdcaba]">
+                    <li><a href="#" class="hover:text-primary transition-colors">Terms of Service</a></li>
+                    <li><a href="#" class="hover:text-primary transition-colors">Privacy Policy</a></li>
+                    <li><a href="#" class="hover:text-primary transition-colors">Risk Disclosure</a></li>
+                    <li><a href="#" class="hover:text-primary transition-colors">Disclaimer</a></li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="border-t border-[#3e4a3d] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="font-['JetBrains_Mono'] text-[#879485] text-[10px] uppercase tracking-widest">© 2025 BharatQuant. All Rights Reserved.</p>
+            <p class="text-[#3e4a3d] text-[10px] text-center md:text-right leading-relaxed max-w-md">
+                Data is for informational purposes only. Not investment advice. BharatQuant is not a SEBI-registered investment adviser.
+            </p>
         </div>
     </div>
 </footer>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Active nav highlight on scroll
+    const sections = ['features', 'screener', 'metrics', 'pricing', 'faq'];
+    const navLinks = document.querySelectorAll('nav a[href^="#"]');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                const link = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+                if (link) link.classList.add('active');
+            }
+        });
+    }, { threshold: 0.4 });
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+    });
+
+    // FAQ icon toggle
+    document.querySelectorAll('.faq-item details').forEach(d => {
+        d.addEventListener('toggle', () => {
+            const icon = d.querySelector('.faq-icon');
+            if (icon) icon.textContent = d.open ? 'close' : 'add';
+        });
+    });
+</script>
 {% endblock %}
