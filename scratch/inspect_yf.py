@@ -1,3 +1,6 @@
+import os
+
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 import yfinance as yf
 import json
 
@@ -12,8 +15,7 @@ def inspect_ticker(sym):
         keys = sorted(list(info.keys()))
         print(f"Total keys: {len(keys)}")
         for k in keys:
-            if "share" in k.lower() or "cap" in k.lower() or "price" in k.lower():
-                print(f"  {k}: {info.get(k)}")
+            print(f"  {k}: {info.get(k)}")
     else:
         print("  .info is empty or failed")
 
@@ -21,6 +23,7 @@ def inspect_ticker(sym):
     try:
         fi = t.fast_info
         for attr in dir(fi):
+            print(attr)
             if not attr.startswith("_"):
                 try:
                     val = getattr(fi, attr)
@@ -38,5 +41,5 @@ def inspect_ticker(sym):
 
 
 if __name__ == "__main__":
-    inspect_ticker("RELIANCE.NS")
-    inspect_ticker("500325.BO")
+    inspect_ticker("RELIGARE.NS")
+    #inspect_ticker("500325.BO")

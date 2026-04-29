@@ -154,12 +154,14 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
         roe3y = cache.get("roe3y")
         growth = cache.get("growth", {})
         f_score = cache.get("f_score")
+        roce_fallback = cache.get("roce_fallback")
     else:
         # Fetch fresh deep financials
         info = {}
         roe3y = None
         growth = {}
         f_score = None
+        roce_fallback = None
         try:
             # Prevent rate limiting by pacing the workers
             time.sleep(random.uniform(0.5, 1.5))
@@ -173,14 +175,23 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
             cf = yt.cashflow
             
             se_r = ni_r = None
-            if not af.empty:
+            if not af.empty and not bs.empty:
                 for l in ["Stockholders Equity", "Total Stockholder Equity", "Common Stock Equity"]:
-                    if l in af.index: se_r = af.loc[l]; break
+                    if l in bs.index: se_r = bs.loc[l]; break
                 for l in ["Net Income", "Net Income Common Stockholders"]:
                     if l in af.index: ni_r = af.loc[l]; break
                 if se_r is not None and ni_r is not None:
-                    roes = [sf(ni_r[c]) / sf(se_r[c]) * 100 for c in af.columns[:3] if sf(ni_r[c]) and sf(se_r[c]) and sf(se_r[c]) != 0]
+                    cols = [c for c in af.columns[:3] if c in bs.columns]
+                    roes = [sf(ni_r[c]) / sf(se_r[c]) * 100 for c in cols if sf(ni_r[c]) and sf(se_r[c]) and sf(se_r[c]) != 0]
                     roe3y = round(sum(roes) / len(roes), 1) if roes else None
+            
+            # ROCE Fallback Calculation from Statements
+            if not af.empty and not bs.empty:
+                op_inc = next((sf(af.loc[l].iloc[0]) for l in ["Operating Income", "Normalized Income", "EBIT"] if l in af.index), None)
+                tot_ass = next((sf(bs.loc[l].iloc[0]) for l in ["Total Assets"] if l in bs.index), None)
+                curr_liab = next((sf(bs.loc[l].iloc[0]) for l in ["Current Liabilities", "Total Current Liabilities"] if l in bs.index), None)
+                if op_inc and tot_ass and curr_liab and (tot_ass - curr_liab) != 0:
+                    roce_fallback = round(op_inc / (tot_ass - curr_liab) * 100, 1)
             
             # Piotroski F-Score calculation
             f_score = calc_piotroski_score(af, bs, cf)
@@ -202,7 +213,8 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
                 "info": info,
                 "roe3y": roe3y,
                 "growth": growth,
-                "f_score": f_score
+                "f_score": f_score,
+                "roce_fallback": roce_fallback
             }
         except Exception as e:
             err = str(e).lower()
@@ -229,7 +241,12 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     de = sf(info.get("debtToEquity"))
     
     r1 = sf(info.get("returnOnEquity"))
-    roe1y = round(r1 * 100, 1) if r1 is not None else None
+    if r1 is not None:
+        roe1y = round(r1 * 100, 1)
+    elif eps is not None and bvps is not None and bvps != 0:
+        roe1y = round((eps / bvps) * 100, 1)
+    else:
+        roe1y = None
     
     om = sf(info.get("operatingMargins"))
     opm = round(om * 100, 1) if om is not None else None
@@ -250,7 +267,10 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     ebit = sf(info.get("ebit"))
     tot_a = sf(info.get("totalAssets"))
     curr_l = sf(info.get("currentLiabilities") or info.get("totalCurrentLiabilities"))
-    roce = round(ebit / (tot_a - curr_l) * 100, 1) if (ebit and tot_a and curr_l and (tot_a - curr_l) != 0) else None
+    if ebit and tot_a and curr_l and (tot_a - curr_l) != 0:
+        roce = round(ebit / (tot_a - curr_l) * 100, 1)
+    else:
+        roce = roce_fallback
 
     # Multi-period Returns
     p1d = price_n_days(close, 1)
