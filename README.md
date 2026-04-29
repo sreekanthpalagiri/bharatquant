@@ -19,8 +19,8 @@ The generated report at `data/nse_bse_screener.xlsx` contains the following metr
 | Column | Description | Why it matters |
 | :--- | :--- | :--- |
 | **Ticker / Name** | Stock identifier and Company Name | Basic identification. |
-| **Trend** | Technical stage (e.g., Stage 2, Golden Cross) | Identifies stocks in confirmed bullish uptrends. |
-| **RS Score** | Relative Strength vs Nifty 50 | Shows outperformance. >0 means it's beating the market. |
+| **Trend** | Technical stage (e.g., Stage 2, Golden Cross) | **Absolute momentum**: Is the stock's own price moving up? |
+| **RS Score** | Relative Strength vs Nifty 50 | **Relative momentum**: Is the stock beating the market? |
 | **F-Score** | Piotroski Health Score (0-9) | 7-9 indicates a strong, high-quality turnaround company. |
 | **Sales Growth % (YoY)** | Revenue growth vs Same Quarter Last Year | Confirms if the business is actually expanding. |
 | **Profit Growth % (YoY)** | Net Profit growth vs Same Quarter Last Year | Key driver for stock price breakouts. |
@@ -43,9 +43,17 @@ The generated report at `data/nse_bse_screener.xlsx` contains the following metr
 
 *Note: The entire row is color-coded based on these rules. All thresholds are fully configurable in `screener/config.py`.*
 
-- 🟩 **Green**: Bullish/Strong (e.g., RS Score > 0, F-Score 7-9, Growth > 20%, ROE > 15%).
-- 🟥 **Red**: Bearish/Weak (e.g., Negative Growth, F-Score <= 3, High Debt, High Pledging).
-- 🟨 **Yellow**: Caution (e.g., RSI overbought/oversold levels).
+- 🟩 **Green**: **High Conviction Bullish**. Requires meeting at least **4+ bullish points** simultaneously (e.g., RS Score > 0, F-Score >= 7, Growth > 20%, ROE > 15%).
+- 🟥 **Red**: **Bearish Flag**. Triggered by any major weakness (e.g., Negative Growth, F-Score <= 3, High Debt, High Pledging).
+- 🟨 **Yellow**: **Caution**. Technical extremes (e.g., RSI overbought > 70 or oversold < 30).
+
+## 💡 Understanding Bullish Signals
+
+BharatQuant evaluates stocks through three distinct layers of bullishness:
+
+1.  **Trend (Absolute)**: Uses 50/200 DMAs to see if the stock's own chart is in an uptrend (e.g., "Stage 2").
+2.  **RS Score (Relative)**: Compares performance against the Nifty 50. A stock can be in an uptrend but still have a negative RS Score if the market is moving faster.
+3.  **Green Row (Aggregate)**: This is the highest filter. It signifies a stock where price momentum, relative strength, and fundamental health (F-Score/Growth) are all aligned.
 
 ## 🚀 How to Run
 

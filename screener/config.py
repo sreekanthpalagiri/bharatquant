@@ -161,17 +161,14 @@ COLOR_RULES = {
         "RSI": "30-70",
     },
     "red": {
-        "RS Score": "<= 0",
         "F-Score": "<= 3",
         "Growth %": "< 0",
         "ROE 1y %": "< 5",
-        "ROE 3y %": "< 5",
         "D/E": ">= 2.0",
-        "Pledged %": ">= 25",
-        "RSI": "<= 30 or >= 70",
+        "Pledged %": ">= 50",
     },
     "yellow": {
-        "RSI": "30-70",
+        "RSI": "<= 30 or >= 70",
     },
 }
 

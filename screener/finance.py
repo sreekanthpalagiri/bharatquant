@@ -137,7 +137,8 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     volume = normalise(pd_s.get("Volume", pd.Series(dtype=float)))
 
     if cp is None and not close.empty:
-        cp = round(float(close.iloc[-1]), 2)
+        val = close.iloc[-1]
+        cp = round(float(val.item() if isinstance(val, pd.Series) else val), 2)
 
     # 1. Financial Cache Management
     cache = stock.get("financials_cache")

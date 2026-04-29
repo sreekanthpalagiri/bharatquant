@@ -140,7 +140,8 @@ def fetch_all_stock_data_parallel(filtered_tickers: list, price_data: dict, all_
         nifty = yf.download("^NSEI", period="1y", progress=False, auto_adjust=True)
         if not nifty.empty:
             c = normalise(nifty["Close"])
-            cp = float(c.iloc[-1])
+            val = c.iloc[-1]
+            cp = float(val.item() if isinstance(val, pd.Series) else val)
             p1y = price_n_days(c, 365)
             idx_ret = pct_ret(cp, p1y) or 0
             log.info(f"Nifty 50 1y Return: {idx_ret:.1f}%")
