@@ -11,3 +11,5 @@ venv/
 env/
 .idea/
 .vscode/
+bharatquant.db
+.qodo
