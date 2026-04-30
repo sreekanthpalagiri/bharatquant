@@ -263,7 +263,8 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     fii = round(phi_inst * 100, 2) if phi_inst is not None else None
     
     pub = round(100 - (prom or 0) - (fii or 0), 2)
-    pledged = round(phi * 100, 1) if phi is not None else None
+    # Yahoo Finance does not provide pledged shares percentage
+    pledged = None
 
     ebit = sf(info.get("ebit"))
     tot_a = sf(info.get("totalAssets"))
