@@ -186,7 +186,6 @@ if __name__ == "__main__":
         log.info("\nStopped by user.")
     except Exception as e:
         log.error(f"Fatal error: {e}", exc_info=True)
-       main()
     except KeyboardInterrupt:
         log.info("\nStopped by user.")
     except Exception as e:
