@@ -157,7 +157,6 @@ COLOR_RULES = {
         "ROE 1y %": "> 15",
         "ROE 3y %": "> 15",
         "D/E": "< 1.0",
-        "Pledged %": "< 25",
         "RSI": "30-70",
     },
     "red": {
@@ -165,7 +164,6 @@ COLOR_RULES = {
         "Growth %": "< 0",
         "ROE 1y %": "< 5",
         "D/E": ">= 2.0",
-        "Pledged %": ">= 50",
     },
     "yellow": {
         "RSI": "<= 30 or >= 70",
