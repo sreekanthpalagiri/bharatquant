@@ -160,9 +160,11 @@ def fetch_all_stock_data_parallel(filtered_tickers: list, price_data: dict, all_
         for fut in as_completed(futures):
             try:
                 res = fut.result()
-                if res:
+                if res and res.get("Price"):
                     results.append(res)
                     count += 1
+                elif res:
+                    log.warning(f"Skipping {res.get('Ticker', 'unknown')}: no price found")
                     
                     # Checkpoint saving every 50 stocks
                     if count % 50 == 0:

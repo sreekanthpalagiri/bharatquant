@@ -39,68 +39,82 @@ def write_excel(rows: list):
     cols_to_use = [c for c in HEADER_LABELS if c in df.columns]
     df = df[cols_to_use]
 
+    # Helper to evaluate config string conditions
+    def check_cond(val, rule_str):
+        if val is None: return False
+        if "or" in rule_str:
+            return any(check_cond(val, r.strip()) for r in rule_str.split("or"))
+        if "-" in rule_str and not rule_str.startswith("-"):
+            try:
+                p = rule_str.split("-")
+                return float(p[0]) <= float(val) <= float(p[1])
+            except: return False
+        op = ''.join([c for c in rule_str if c in '<=>'])
+        try:
+            num = float(rule_str.replace(op, "").strip())
+            if op == ">": return float(val) > num
+            if op == ">=": return float(val) >= num
+            if op == "<": return float(val) < num
+            if op == "<=": return float(val) <= num
+        except: pass
+        return False
+
+    def compute_fill_and_reason(row_dict):
+        red_triggers = []
+        for col, rule in COLOR_RULES.get("red", {}).items():
+            if col == "Growth %":
+                sg = row_dict.get("Sales Growth % (YoY)")
+                pg = row_dict.get("Profit Growth % (YoY)")
+                if check_cond(sg, rule):
+                    red_triggers.append("Sales Growth < 0%")
+                if check_cond(pg, rule):
+                    red_triggers.append("Profit Growth < 0%")
+            elif col in row_dict and check_cond(row_dict.get(col), rule):
+                red_triggers.append(f"{col} {rule}")
+
+        if red_triggers:
+            return RED_FILL, "Red: " + " | ".join(red_triggers)
+
+        green_hits = []
+        for col, rule in COLOR_RULES.get("green", {}).items():
+            if col == "Growth %":
+                if check_cond(row_dict.get("Sales Growth % (YoY)"), rule) and check_cond(row_dict.get("Profit Growth % (YoY)"), rule):
+                    green_hits.append("Growth %")
+            elif col in row_dict and check_cond(row_dict.get(col), rule):
+                green_hits.append(col)
+
+        total_green = len(COLOR_RULES.get("green", {}))
+        if len(green_hits) >= 4:
+            return GREEN_FILL, f"Green ({len(green_hits)}/{total_green}): " + ", ".join(green_hits)
+
+        yellow_triggers = []
+        for col, rule in COLOR_RULES.get("yellow", {}).items():
+            if col in row_dict and check_cond(row_dict.get(col), rule):
+                yellow_triggers.append(f"{col} {rule}")
+
+        if yellow_triggers:
+            return YELLOW_FILL, "Yellow: " + " | ".join(yellow_triggers)
+
+        return None, f"Neutral ({len(green_hits)}/{total_green}): " + (", ".join(green_hits) if green_hits else "no signals")
+
+    # Pre-compute fills and reasons before writing to Excel
+    fills = []
+    reasons = []
+    for row in df.itertuples(index=False):
+        row_dict = dict(zip(df.columns, row))
+        fill, reason = compute_fill_and_reason(row_dict)
+        fills.append(fill)
+        reasons.append(reason)
+
+    df["Color Reason"] = reasons
+
     # Save to Excel
     with pd.ExcelWriter(OUTPUT_FILE, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Screener")
         ws = writer.sheets["Screener"]
 
-        # Helper to evaluate config string conditions
-        def check_cond(val, rule_str):
-            if val is None: return False
-            if "or" in rule_str:
-                return any(check_cond(val, r.strip()) for r in rule_str.split("or"))
-            if "-" in rule_str and not rule_str.startswith("-"):
-                try:
-                    p = rule_str.split("-")
-                    return float(p[0]) <= float(val) <= float(p[1])
-                except: return False
-            op = ''.join([c for c in rule_str if c in '<=>'])
-            try:
-                num = float(rule_str.replace(op, "").strip())
-                if op == ">": return float(val) > num
-                if op == ">=": return float(val) >= num
-                if op == "<": return float(val) < num
-                if op == "<=": return float(val) <= num
-            except: pass
-            return False
-
         # Apply Formatting
-        for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-            row_dict = dict(zip(df.columns, row))
-            
-            # Determine Row Color
-            row_fill = None
-            is_red = False
-            green_points = 0
-            
-            # 1. Check Red Flags (Immediate Red)
-            for col, rule in COLOR_RULES.get("red", {}).items():
-                if col == "Growth %":
-                    if check_cond(row_dict.get("Sales Growth % (YoY)"), rule) or check_cond(row_dict.get("Profit Growth % (YoY)"), rule):
-                        is_red = True
-                elif col in row_dict and check_cond(row_dict.get(col), rule):
-                    is_red = True
-            
-            if is_red:
-                row_fill = RED_FILL
-            else:
-                # 2. Check Green Flags
-                for col, rule in COLOR_RULES.get("green", {}).items():
-                    if col == "Growth %":
-                        if check_cond(row_dict.get("Sales Growth % (YoY)"), rule) and check_cond(row_dict.get("Profit Growth % (YoY)"), rule):
-                            green_points += 1
-                    elif col in row_dict and check_cond(row_dict.get(col), rule):
-                        green_points += 1
-                
-                if green_points >= 4:  # If at least 4 bullish indicators are met
-                    row_fill = GREEN_FILL
-                else:
-                    # 3. Check Yellow Flags
-                    for col, rule in COLOR_RULES.get("yellow", {}).items():
-                        if col in row_dict and check_cond(row_dict.get(col), rule):
-                            row_fill = YELLOW_FILL
-
-            # Apply formats to all cells in the row
+        for row_idx, (row_fill, row) in enumerate(zip(fills, df.itertuples(index=False)), start=2):
             for col_idx, (lbl, val) in enumerate(zip(df.columns, row), start=1):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 if lbl in FMT_MAP:
@@ -111,7 +125,7 @@ def write_excel(rows: list):
         # 3. Final UI Adjustments (Header Freeze, Column Widths)
         ws.freeze_panes = "A2"
         for ci, lbl in enumerate(df.columns, start=1):
-            width = WIDTH_MAP.get(lbl, 12)
+            width = WIDTH_MAP.get(lbl, 12) if lbl != "Color Reason" else 50
             ws.column_dimensions[get_column_letter(ci)].width = width
 
         # 4. Add Legend Sheet
