@@ -21,6 +21,7 @@ from screener.network import (
     get_nse_tickers,
     get_bse_tickers,
     fetch_bhavcopy_prices,
+    fetch_nse_pledge_data,
 )
 from screener.config import (
     log,
@@ -90,6 +91,9 @@ def main():
     # ── Step 3: Bhavcopy prices (Smart Matching via ISIN) ───────────────
     log.info("Fetching today's closing prices from NSE + BSE bhavcopy...")
     bhavcopy_prices = fetch_bhavcopy_prices(unique)
+
+    # ── Step 3.2: Corporate Pledge Data (NSE) ──────────────────────────
+    pledge_data = fetch_nse_pledge_data()
 
     # ── Step 3.5: Penny Stock Shield ───────────────────────────────────
     penny_dropped = 0
@@ -168,7 +172,7 @@ def main():
         time.sleep(SLEEP_PRICE_BATCH)
 
     # ── Step 7: Parallel financials fetch (with Checkpoint Saving) ───────
-    rows = fetch_all_stock_data_parallel(unique, price_data, all_tickers)
+    rows = fetch_all_stock_data_parallel(unique, price_data, all_tickers, pledge_data)
     save_cache(all_tickers, update_shares=True)
 
     # ── Step 8: Write Excel ───────────────────────────────────────────────
@@ -178,6 +182,11 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except KeyboardInterrupt:
+        log.info("\nStopped by user.")
+    except Exception as e:
+        log.error(f"Fatal error: {e}", exc_info=True)
+       main()
     except KeyboardInterrupt:
         log.info("\nStopped by user.")
     except Exception as e:

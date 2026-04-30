@@ -41,7 +41,7 @@ The generated report at `data/nse_bse_screener.xlsx` contains the following metr
 
 ## 🎨 Color Coding Legend
 
-*Note: The entire row is color-coded based on these rules. All thresholds are fully configurable in `screener/config.py`.*
+*Note: The entire row is color-coded based on these rules. All thresholds are fully configurable in `config/screener_config.json`.*
 
 - 🟩 **Green**: **High Conviction Bullish**. Requires meeting at least **4+ bullish points** simultaneously (e.g., RS Score > 0, F-Score >= 7, Growth > 20%, ROE > 15%).
 - 🟥 **Red**: **Bearish Flag**. Triggered by any major weakness (e.g., Negative Growth, F-Score <= 3, High Debt, High Pledging).
@@ -54,6 +54,15 @@ BharatQuant evaluates stocks through three distinct layers of bullishness:
 1.  **Trend (Absolute)**: Uses 50/200 DMAs to see if the stock's own chart is in an uptrend (e.g., "Stage 2").
 2.  **RS Score (Relative)**: Compares performance against the Nifty 50. A stock can be in an uptrend but still have a negative RS Score if the market is moving faster.
 3.  **Green Row (Aggregate)**: This is the highest filter. It signifies a stock where price momentum, relative strength, and fundamental health (F-Score/Growth) are all aligned.
+
+## 🛠️ Data Sources
+
+BharatQuant utilizes a hybrid data acquisition strategy:
+- **Exchange Archives**: NSE/BSE Bhavcopy and Ticker lists for official pricing and master data.
+- **NSE Corporate API**: Real-time corporate disclosure data for accurate **Promoter Pledging** metrics.
+- **Yahoo Finance**: Historical price data, Balance Sheets, Cash Flows, and Income Statements for F-Score and Growth analysis.
+
+---
 
 ## 🚀 How to Run
 

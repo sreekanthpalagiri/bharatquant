@@ -2,6 +2,7 @@ import os
 import logging
 from datetime import datetime
 
+# Refer to https://github.com/theonlyanil/pnsea for NSE internal API links and documentation
 # Path Configuration
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -11,7 +12,7 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 
 CONFIG_FILE = os.path.join(CONFIG_DIR, "screener_config.json")
 
-# Default Configuration
+# Default Configuration (Internal fallback)
 DEFAULT_CONFIG = {
     "output": {
         "excel_file": "data/nse_bse_screener.xlsx",
@@ -30,6 +31,28 @@ DEFAULT_CONFIG = {
     },
     "fetch": {"batch_size": 10, "sleep_price_batch": 3.0, "info_workers": 3},
     "logging": {"level": "INFO"},
+    "color_rules": {
+        "green": {
+            "RS Score": "> 0",
+            "F-Score": ">= 7",
+            "Growth %": "> 20",
+            "ROE 1y %": "> 15",
+            "ROE 3y %": "> 15",
+            "D/E": "< 1.0",
+            "Pledged %": "< 25",
+            "RSI": "30-70",
+        },
+        "red": {
+            "F-Score": "<= 3",
+            "Growth %": "< 0",
+            "ROE 1y %": "< 5",
+            "D/E": ">= 2.0",
+            "Pledged %": ">= 50",
+        },
+        "yellow": {
+            "RSI": "<= 30 or >= 70",
+        },
+    },
 }
 
 
@@ -39,7 +62,18 @@ def load_config():
 
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
-            return json.load(f)
+            try:
+                user_conf = json.load(f)
+                # Deep merge or simple update? Let's do a simple update for now
+                base = DEFAULT_CONFIG.copy()
+                for k, v in user_conf.items():
+                    if isinstance(v, dict) and k in base:
+                        base[k].update(v)
+                    else:
+                        base[k] = v
+                return base
+            except:
+                return DEFAULT_CONFIG
     return DEFAULT_CONFIG
 
 
@@ -60,6 +94,7 @@ BATCH_SIZE = conf["fetch"]["batch_size"]
 SLEEP_PRICE_BATCH = conf["fetch"]["sleep_price_batch"]
 INFO_WORKERS = conf["fetch"]["info_workers"]
 LOG_LEVEL = conf["logging"]["level"]
+COLOR_RULES = conf["color_rules"]
 
 # Setup Logging
 logging.basicConfig(
@@ -146,29 +181,12 @@ FMT_MAP = {
     "Public %": "0.0",
 }
 
-# ------------------------------------------------------------------
-# Color Thresholds for Row-Level Formatting (used in exporter)
-# ------------------------------------------------------------------
-COLOR_RULES = {
-    "green": {
-        "RS Score": "> 0",
-        "F-Score": ">= 7",
-        "Growth %": "> 20",
-        "ROE 1y %": "> 15",
-        "ROE 3y %": "> 15",
-        "D/E": "< 1.0",
-        "RSI": "30-70",
-    },
-    "red": {
-        "F-Score": "<= 3",
-        "Growth %": "< 0",
-        "ROE 1y %": "< 5",
-        "D/E": ">= 2.0",
-    },
-    "yellow": {
-        "RSI": "<= 30 or >= 70",
-    },
-}
+# SILENCE library noise
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+logging.getLogger("requests").setLevel(logging.CRITICAL)
+
+TODAY = datetime.today()
 
 LEGEND = [
     {"Column": "Ticker / Name", "Description": "Stock identifier and Company Name", "Importance": "Basic identification", "Color Rule": ""},

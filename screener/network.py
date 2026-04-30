@@ -155,6 +155,38 @@ def get_bse_tickers() -> list:
     return []
 
 
+def fetch_nse_pledge_data() -> dict:
+    """
+    Fetch corporate pledge data directly from the NSE API.
+    Returns a dictionary mapping Company Name (uppercase) to pledge percentage.
+    """
+    log.info("Fetching corporate pledge data from NSE...")
+    try:
+        # Pre-visit to establish session cookies
+        SESSION.get("https://www.nseindia.com", timeout=10)
+        time.sleep(1)
+        
+        url = "https://www.nseindia.com/api/corporate-pledgedata"
+        r = SESSION.get(url, timeout=20)
+        if r.status_code == 200:
+            data = r.json()
+            records = data.get("data", [])
+            pledge_map = {}
+            for rec in records:
+                name = str(rec.get("comName", "")).strip().upper()
+                p_val = rec.get("percPromoterShares")
+                if p_val:
+                    try:
+                        pledge_map[name] = float(str(p_val).strip())
+                    except:
+                        pass
+            log.info(f"Pledge data loaded for {len(pledge_map)} companies.")
+            return pledge_map
+    except Exception as e:
+        log.warning(f"Failed to fetch NSE pledge data: {e}")
+    return {}
+
+
 def fetch_bhavcopy_prices(all_tickers: list) -> dict:
     """
     Download and process the latest closing prices from both NSE and BSE.

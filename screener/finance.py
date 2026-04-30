@@ -125,12 +125,13 @@ def fetch_shares_outstanding(tickers: list) -> dict:
     return result
 
 
-def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: float = 0.0) -> dict:
+def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: float = 0.0, pledge_data: dict = None) -> dict:
     """
     Perform deep analysis on a single stock.
     Combines cached financial data with fresh technical signals.
     Calculates: RS Score, F-Score, Trend, Growth %, Valuation Multiples, etc.
     """
+    if pledge_data is None: pledge_data = {}
     ticker_sym = stock["ticker"]
     pd_s = price_data.get(ticker_sym, {})
     close = normalise(pd_s.get("Close", pd.Series(dtype=float)))
@@ -263,8 +264,10 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     fii = round(phi_inst * 100, 2) if phi_inst is not None else None
     
     pub = round(100 - (prom or 0) - (fii or 0), 2)
-    # Yahoo Finance does not provide pledged shares percentage
-    pledged = None
+    
+    # Use official NSE pledge data if available
+    c_name = str(stock.get("company_name", "")).strip().upper()
+    pledged = pledge_data.get(c_name)
 
     ebit = sf(info.get("ebit"))
     tot_a = sf(info.get("totalAssets"))

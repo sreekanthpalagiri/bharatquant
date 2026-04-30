@@ -124,12 +124,13 @@ def filter_by_mcap(tickers: list, bhavcopy_prices: dict) -> list:
     return kept
 
 
-def fetch_all_stock_data_parallel(filtered_tickers: list, price_data: dict, all_tickers: list) -> list:
+def fetch_all_stock_data_parallel(filtered_tickers: list, price_data: dict, all_tickers: list, pledge_data: dict = None) -> list:
     """
     Perform deep financial and technical analysis in parallel.
     Uses ThreadPoolExecutor to handle concurrent Yahoo Finance fetches.
     Saves a checkpoint every 50 stocks to ensure data is preserved.
     """
+    if pledge_data is None: pledge_data = {}
     log.info(f"Starting deep analysis for {len(filtered_tickers)} stocks ({INFO_WORKERS} workers)...")
     results = []
 
