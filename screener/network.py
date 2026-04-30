@@ -173,14 +173,28 @@ def fetch_nse_pledge_data() -> dict:
             records = data.get("data", [])
             pledge_map = {}
             for rec in records:
-                name = str(rec.get("comName", "")).strip().upper()
-                p_val = rec.get("percPromoterShares")
-                if p_val:
-                    try:
-                        pledge_map[name] = float(str(p_val).strip())
-                    except:
-                        pass
-            log.info(f"Pledge data loaded for {len(pledge_map)} companies.")
+                raw_n = str(rec.get("comName", "")).strip().upper()
+                # Store exact name
+                
+                try:
+                    p_str = str(rec.get("numSharesPledged", "0")).strip().replace(",", "")
+                    h_str = str(rec.get("totPromoterHolding", "0")).strip().replace(",", "")
+                    num_pledged = float(p_str)
+                    tot_prom = float(h_str)
+                    
+                    val = 0.0
+                    if tot_prom > 0:
+                        val = round((num_pledged / tot_prom) * 100, 2)
+                    
+                    pledge_map[raw_n] = val
+                    
+                    # Also store normalized name for fuzzy matching
+                    norm_n = raw_n.replace(".", "").replace(" LIMITED", "").replace(" LTD", "").replace("  ", " ")
+                    if norm_n not in pledge_map:
+                        pledge_map[norm_n] = val
+                except:
+                    continue
+            log.info(f"Pledge data loaded for {len(pledge_map)} variants from NSE.")
             return pledge_map
     except Exception as e:
         log.warning(f"Failed to fetch NSE pledge data: {e}")

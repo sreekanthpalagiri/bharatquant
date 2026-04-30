@@ -265,9 +265,19 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     
     pub = round(100 - (prom or 0) - (fii or 0), 2)
     
-    # Use official NSE pledge data if available
-    c_name = str(stock.get("company_name", "")).strip().upper()
-    pledged = pledge_data.get(c_name)
+    # Use official NSE pledge data with robust name normalization
+    raw_name = str(stock.get("company_name", "")).strip().upper()
+    
+    # Try exact match first
+    pledged = pledge_data.get(raw_name)
+    
+    # If no exact match, try normalized match
+    if pledged is None:
+        c_name = raw_name.replace(".", "").replace(" LIMITED", "").replace(" LTD", "").replace("  ", " ")
+        pledged = pledge_data.get(c_name)
+    
+    if pledged is not None and pledged > 0:
+        log.info(f"Pledge Match Found: {raw_name} -> {pledged}%")
 
     ebit = sf(info.get("ebit"))
     tot_a = sf(info.get("totalAssets"))

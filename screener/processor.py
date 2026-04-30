@@ -9,6 +9,7 @@ Handles:
 """
 
 import yfinance as yf
+import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .config import log, INFO_WORKERS, MIN_MCAP_CR, MIN_PRICE, WHITELIST
 from .finance import fetch_stock_data
@@ -151,7 +152,7 @@ def fetch_all_stock_data_parallel(filtered_tickers: list, price_data: dict, all_
     
     with ThreadPoolExecutor(max_workers=INFO_WORKERS) as pool:
         futures = {
-            pool.submit(fetch_stock_data, t, price_data, None, idx_ret): t 
+            pool.submit(fetch_stock_data, t, price_data, None, idx_ret, pledge_data): t 
             for t in filtered_tickers
         }
         
