@@ -276,9 +276,6 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
         c_name = raw_name.replace(".", "").replace(" LIMITED", "").replace(" LTD", "").replace("  ", " ")
         pledged = pledge_data.get(c_name)
     
-    if pledged is not None and pledged > 0:
-        log.info(f"Pledge Match Found: {raw_name} -> {pledged}%")
-
     ebit = sf(info.get("ebit"))
     tot_a = sf(info.get("totalAssets"))
     curr_l = sf(info.get("currentLiabilities") or info.get("totalCurrentLiabilities"))
