@@ -116,12 +116,15 @@ def filter_by_mcap(tickers: list, bhavcopy_prices: dict) -> list:
         # Modify the original dictionary in-place so cache saving works
         t["mkt_cap_cr"] = mc
         
-        if mc and mc < MIN_MCAP_CR: 
+        # Stricter Filter: Drop if MCap is unknown OR below threshold
+        if mc is None:
+            dropped += 1
+        elif mc < MIN_MCAP_CR: 
             dropped += 1
         else: 
             kept.append(t)
             
-    log.info(f"MCap filter done: {len(kept)} kept | {dropped} below ₹{MIN_MCAP_CR} Cr")
+    log.info(f"MCap filter done: {len(kept)} kept | {dropped} dropped (below ₹{MIN_MCAP_CR} Cr or unknown)")
     return kept
 
 
@@ -156,20 +159,24 @@ def fetch_all_stock_data_parallel(filtered_tickers: list, price_data: dict, all_
             for t in filtered_tickers
         }
         
-        count = 0
+        processed_count = 0
+        total = len(filtered_tickers)
         for fut in as_completed(futures):
+            processed_count += 1
             try:
                 res = fut.result()
                 if res and res.get("Price"):
                     results.append(res)
-                    count += 1
                 elif res:
                     log.warning(f"Skipping {res.get('Ticker', 'unknown')}: no price found")
+                
+                # Progress logging every 10 stocks or at the end
+                if processed_count % 10 == 0 or processed_count == total:
+                    log.info(f"Progress: {processed_count}/{total} analyzed (Valid rows: {len(results)})...")
                     
-                    # Checkpoint saving every 50 stocks
-                    if count % 50 == 0:
-                        log.info(f"Progress Checkpoint: {count}/{len(filtered_tickers)} analyzed...")
-                        save_cache(all_tickers, update_shares=True)
+                # Checkpoint saving every 50 stocks
+                if processed_count % 50 == 0:
+                    save_cache(all_tickers, update_shares=True)
             except Exception as e:
                 log.warning(f"Worker failed for a stock: {e}")
 

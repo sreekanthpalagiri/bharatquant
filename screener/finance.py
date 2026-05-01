@@ -240,7 +240,8 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     mcap_cr = to_cr(mkt_cap)
     eps = sf(info.get("trailingEps"))
     bvps = sf(info.get("bookValue"))
-    de = sf(info.get("debtToEquity"))
+    de_raw = sf(info.get("debtToEquity"))
+    de = round(de_raw / 100, 2) if de_raw is not None else None
     
     r1 = sf(info.get("returnOnEquity"))
     if r1 is not None:
@@ -265,7 +266,7 @@ def fetch_stock_data(stock: dict, price_data: dict, cp: float, index_return_1y: 
     
     pub = round(100 - (prom or 0) - (fii or 0), 2)
     
-    # Use official NSE pledge data with robust name normalization
+    # Use official NSE pledge data witdeh robust name normalization
     raw_name = str(stock.get("company_name", "")).strip().upper()
     
     # Try exact match first

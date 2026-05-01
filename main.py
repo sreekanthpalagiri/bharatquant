@@ -101,14 +101,23 @@ def main():
     for t in unique:
         tk = t["ticker"]
         price = bhavcopy_prices.get(tk)
-        if price is not None:
-            if price < MIN_PRICE and tk not in WHITELIST:
+        
+        # If no price found in official Bhavcopy, skip (unless whitelisted)
+        if price is None:
+            if tk not in WHITELIST:
+                continue
+        
+        # If price is below minimum, skip (unless whitelisted)
+        if price is not None and price < MIN_PRICE:
+            if tk not in WHITELIST:
                 penny_dropped += 1
                 continue
+                
         clean_unique.append(t)
 
     if penny_dropped > 0:
         log.info(f"Penny Stock Shield: Ignored {penny_dropped} stocks priced below ₹{MIN_PRICE}")
+    log.info(f"Stocks passing price filter: {len(clean_unique)}")
     unique = clean_unique
 
     # ── Step 4: MCap filter (using bulk MCap from BSE where available) ────
