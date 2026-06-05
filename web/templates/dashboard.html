@@ -1,0 +1,51 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Dashboard | BharatQuant{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-6xl mx-auto">
+    <header class="mb-8">
+        <h1 class="text-2xl font-semibold text-on-surface mb-2">Welcome back, {{ current_user.full_name or 'User' }}!</h1>
+        <p class="text-neutral-500">Here's your market overview and portfolio performance.</p>
+    </header>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-neutral-500 font-['JetBrains Mono'] text-xs uppercase tracking-wider">Portfolio Value</span>
+                <span class="material-symbols-outlined text-green-500">trending_up</span>
+            </div>
+            <div class="font-['JetBrains Mono'] text-2xl font-semibold mb-1">₹0.00</div>
+            <div class="font-['JetBrains Mono'] text-sm text-green-500">+0.00%</div>
+        </div>
+        
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-neutral-500 font-['JetBrains Mono'] text-xs uppercase tracking-wider">Active Positions</span>
+                <span class="material-symbols-outlined text-neutral-500">account_balance_wallet</span>
+            </div>
+            <div class="font-['JetBrains Mono'] text-2xl font-semibold mb-1">0</div>
+            <div class="text-sm text-neutral-400">No active positions</div>
+        </div>
+        
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-neutral-500 font-['JetBrains Mono'] text-xs uppercase tracking-wider">Watchlist Items</span>
+                <span class="material-symbols-outlined text-neutral-500">monitoring</span>
+            </div>
+            <div class="font-['JetBrains Mono'] text-2xl font-semibold mb-1">0</div>
+            <div class="text-sm text-neutral-400">Add stocks to track</div>
+        </div>
+    </div>
+    
+    <div class="bg-[#111111] border border-[#2a2a2a] p-8 text-center">
+        <span class="material-symbols-outlined text-6xl text-neutral-700 mb-4">analytics</span>
+        <h2 class="text-xl font-semibold mb-2">Start Your Quantitative Analysis</h2>
+        <p class="text-neutral-500 mb-6">Screen stocks, build strategies, and track your portfolio with institutional-grade tools.</p>
+        <div class="flex gap-4 justify-center">
+            <a href="#" class="bg-primary text-on-primary px-6 py-2 font-bold rounded hover:brightness-110 transition-all">Explore Screener</a>
+            <a href="{{ url_for('subscription.index') }}" class="border border-outline text-on-surface px-6 py-2 font-bold rounded hover:bg-surface-container transition-all">View Plans</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>{% block title %}BharatQuant | High-Precision Quantitative Data{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#62df7d",
+                        "on-primary": "#003914",
+                        "primary-container": "#1ca64d",
+                        "on-primary-container": "#003111",
+                        "surface": "#0e150f",
+                        "on-surface": "#dde5d9",
+                        "surface-container": "#1b211a",
+                        "surface-container-low": "#171d16",
+                        "surface-container-high": "#252c24",
+                        "surface-variant": "#30372f",
+                        "on-surface-variant": "#bdcaba",
+                        "outline": "#879485",
+                        "outline-variant": "#3e4a3d",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "tertiary": "#ffb2bf",
+                        "tertiary-container": "#ec6284"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "display-xl": ["Inter"],
+                        "metric-md": ["JetBrains Mono"],
+                        "metric-lg": ["JetBrains Mono"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #dde5d9;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        input:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="font-['Inter'] antialiased">
+    {% block content %}{% endblock %}
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flash-messages" class="fixed top-4 right-4 z-50 space-y-2">
+                {% for category, message in messages %}
+                <div class="bg-surface-container-high border border-outline px-6 py-4 rounded flex items-center gap-3 shadow-lg animate-fade-in">
+                    {% if category == 'success' %}
+                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                    {% elif category == 'error' %}
+                    <span class="material-symbols-outlined text-error">error</span>
+                    {% else %}
+                    <span class="material-symbols-outlined text-on-surface-variant">info</span>
+                    {% endif %}
+                    <span class="text-on-surface">{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <script>
+                setTimeout(() => {
+                    const flashMessages = document.getElementById('flash-messages');
+                    if (flashMessages) {
+                        flashMessages.style.opacity = '0';
+                        flashMessages.style.transition = 'opacity 0.5s';
+                        setTimeout(() => flashMessages.remove(), 500);
+                    }
+                }, 5000);
+            </script>
+        {% endif %}
+    {% endwith %}
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

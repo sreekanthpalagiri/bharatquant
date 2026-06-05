@@ -1,0 +1,220 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Subscription | BharatQuant{% endblock %}
+
+{% block dashboard_content %}
+<div class="max-w-4xl mx-auto">
+    <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+            <div class="text-green-600 font-['JetBrains Mono'] text-xs mb-2 uppercase tracking-wider">ACCOUNT SETTINGS</div>
+            <h1 class="text-2xl font-semibold text-on-surface">Subscription</h1>
+        </div>
+        <div class="flex gap-2">
+            <span class="px-2 py-0.5 bg-neutral-900 border border-neutral-800 rounded text-[10px] font-['JetBrains Mono'] text-neutral-400 uppercase">STATUS</span>
+            <div class="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-0.5 rounded text-primary text-xs font-bold uppercase tracking-wider">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                {{ current_user.subscription_status|title }}
+            </div>
+        </div>
+    </header>
+    
+    {% if current_user.subscription_status == 'active' %}
+    <div class="bg-[#111111] border border-[#2a2a2a] p-8 mb-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none">
+            <span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+        </div>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+            <div class="space-y-4">
+                <div>
+                    <span class="text-neutral-500 text-xs font-['JetBrains Mono'] uppercase tracking-widest">CURRENT PLAN</span>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <h2 class="text-4xl font-bold text-on-surface">{{ current_user.subscription_plan|title }}</h2>
+                        <span class="text-green-500 font-['JetBrains Mono'] text-lg font-semibold">Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid md:grid-cols-2 gap-6 mb-12">
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6 hover:bg-neutral-900/30 transition-colors group">
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 bg-neutral-900 flex items-center justify-center border border-neutral-800">
+                    <span class="material-symbols-outlined text-neutral-400 group-hover:text-error">cancel</span>
+                </div>
+            </div>
+            <h3 class="text-sm text-on-surface mb-2 font-semibold">Cancel Subscription</h3>
+            <p class="text-neutral-500 text-xs mb-6">Stop your recurring billing. You will retain access until the end of the current billing cycle.</p>
+            <button onclick="cancelSubscription()" class="w-full py-2 border border-error/50 text-error text-xs font-bold uppercase tracking-widest hover:bg-error/10 transition-all">Cancel Subscription</button>
+        </div>
+        
+        <div class="bg-[#111111] border border-[#2a2a2a] p-6 hover:bg-neutral-900/30 transition-colors group">
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 bg-neutral-900 flex items-center justify-center border border-neutral-800">
+                    <span class="material-symbols-outlined text-neutral-400 group-hover:text-primary">settings</span>
+                </div>
+            </div>
+            <h3 class="text-sm text-on-surface mb-2 font-semibold">Manage Billing</h3>
+            <p class="text-neutral-500 text-xs mb-6">Update payment method, view invoices, and manage your billing information.</p>
+            <button onclick="openCustomerPortal()" class="w-full py-2 border border-primary/50 text-primary text-xs font-bold uppercase tracking-widest hover:bg-primary/10 transition-all">Manage Billing</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center mb-16">
+        <h2 class="text-2xl font-semibold text-on-surface mb-4">Select Your Terminal</h2>
+        <p class="text-on-surface-variant">Simple, transparent pricing for every type of investor.</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-surface-container-low border border-outline-variant p-8 flex flex-col h-full rounded">
+            <span class="font-['JetBrains Mono'] text-xs text-on-surface-variant mb-4 uppercase">Starter</span>
+            <div class="flex items-baseline gap-1 mb-6">
+                <span class="font-['JetBrains Mono'] text-3xl text-on-surface">₹0</span>
+                <span class="text-on-surface-variant text-sm">/mo</span>
+            </div>
+            <ul class="space-y-4 mb-10 flex-grow">
+                <li class="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> 100 Stocks / Search
+                </li>
+                <li class="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> Basic Fundamentals
+                </li>
+                <li class="flex items-center gap-2 text-sm text-neutral-600">
+                    <span class="material-symbols-outlined text-lg">cancel</span> No Excel Export
+                </li>
+            </ul>
+            <button class="w-full py-3 border border-outline text-on-surface font-bold rounded hover:bg-surface-container transition-all">Current Plan</button>
+        </div>
+        
+        <div class="bg-surface-container-low border-2 border-primary p-8 flex flex-col h-full relative rounded transform md:scale-105 z-10 shadow-xl">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-3 py-1 text-[10px] font-bold uppercase rounded-full">Most Popular</div>
+            <span class="font-['JetBrains Mono'] text-xs text-primary mb-4 uppercase">Pro Terminal</span>
+            <div class="flex items-baseline gap-1 mb-6">
+                <span class="font-['JetBrains Mono'] text-4xl text-on-surface">₹999</span>
+                <span class="text-on-surface-variant text-sm">/mo</span>
+            </div>
+            <ul class="space-y-4 mb-10 flex-grow">
+                <li class="flex items-center gap-2 text-sm text-on-surface">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> Unlimited Stock Screening
+                </li>
+                <li class="flex items-center gap-2 text-sm text-on-surface">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> Full Fundamental + Technical
+                </li>
+                <li class="flex items-center gap-2 text-sm text-on-surface">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> Unlimited Excel Exports
+                </li>
+                <li class="flex items-center gap-2 text-sm text-on-surface">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> 5-Year Historical View
+                </li>
+            </ul>
+            <button onclick="subscribe('{{ config.STRIPE_PRICE_PRO }}')" class="w-full py-3 bg-primary text-on-primary font-bold rounded hover:brightness-110 transition-all shadow-lg shadow-primary/20">Upgrade Now</button>
+        </div>
+        
+        <div class="bg-surface-container-low border border-outline-variant p-8 flex flex-col h-full rounded">
+            <span class="font-['JetBrains Mono'] text-xs text-on-surface-variant mb-4 uppercase">Team</span>
+            <div class="flex items-baseline gap-1 mb-6">
+                <span class="font-['JetBrains Mono'] text-3xl text-on-surface">₹2,999</span>
+                <span class="text-on-surface-variant text-sm">/mo</span>
+            </div>
+            <ul class="space-y-4 mb-10 flex-grow">
+                <li class="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> 5 User Licenses
+                </li>
+                <li class="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> API Access (Beta)
+                </li>
+                <li class="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> Custom Report Templates
+                </li>
+                <li class="flex items-center gap-2 text-sm text-on-surface-variant">
+                    <span class="material-symbols-outlined text-primary text-lg">check_circle</span> Priority Support
+                </li>
+            </ul>
+            <button onclick="subscribe('{{ config.STRIPE_PRICE_TEAM }}')" class="w-full py-3 border border-outline text-on-surface font-bold rounded hover:bg-surface-container transition-all">Upgrade Now</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const stripe = Stripe('{{ config.STRIPE_PUBLIC_KEY }}');
+
+async function subscribe(priceId) {
+    try {
+        const response = await fetch('/subscription/create-checkout-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ price_id: priceId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+        
+        const result = await stripe.redirectToCheckout({
+            sessionId: data.sessionId
+        });
+        
+        if (result.error) {
+            alert(result.error.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
+
+async function cancelSubscription() {
+    if (!confirm('Are you sure you want to cancel your subscription?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/subscription/cancel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
+
+async function openCustomerPortal() {
+    try {
+        const response = await fetch('/subscription/portal', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            window.location.href = data.url;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
+</script>
+{% endblock %}
